@@ -5,12 +5,19 @@
         <field name="name">Default</field>
     </record>
     <record id="product_pricelist_2" model="product.pricelist">
-        <field name="name">Institutions</field>
+        <field name="name">Schools</field>
         <field name="item_ids" eval="[(0, 0, {
-            'display_applied_on': '1_product',
-            'applied_on' : '3_global',
+            'applied_on': '3_global',
             'compute_price': 'percentage',
-            'percent_price': 5,
+            'percent_price': 15,
+        })]"/>
+    </record>
+    <record id="product_pricelist_3" model="product.pricelist">
+        <field name="name">Staff</field>
+        <field name="item_ids" eval="[(0, 0, {
+            'applied_on': '3_global',
+            'compute_price': 'percentage',
+            'percent_price': 20,
         })]"/>
     </record>
 </odoo>
