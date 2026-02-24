@@ -99,12 +99,10 @@ class CustomerOrder(models.Model):
             po = self.env['purchase.order'].search([
                 ('partner_id', '=', vendor.id),
                 ('state', '=', 'draft'),
-                ('x_purchase_type', '=', 'customer_order'),
             ], limit=1)
             if not po:
                 po = self.env['purchase.order'].create({
                     'partner_id': vendor.id,
-                    'x_purchase_type': 'customer_order',
                 })
             for line in order_lines:
                 existing_pol = po.order_line.filtered(
