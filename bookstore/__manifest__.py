@@ -9,6 +9,7 @@
         'appointment',
         'calendar',
         'contacts',
+        'delivery',
         'documents',
         'hr',
         'hr_attendance',
@@ -41,6 +42,7 @@
     ],
     'data': [
         'data/res_config_settings.xml',
+        'data/stock_warehouse.xml',
         'data/ir_attachment_pre.xml',
         'data/ir_model_fields.xml',
         'data/ir_ui_view.xml',
@@ -51,6 +53,7 @@
         'data/product_category.xml',
         'data/product_pricelist.xml',
         'data/product_product.xml',
+        'data/stock_collect.xml',
         'data/pos_payment_method.xml',
         'data/pos_config.xml',
         'data/knowledge_cover.xml',
