@@ -36,24 +36,7 @@ for template in self:
         <field name="related">product_id.barcode</field>
         <field name="model_id" ref="purchase.model_purchase_order_line"/>
     </record>
-    <record id="x_purchase_type_field" model="ir.model.fields">
-        <field name="name">x_purchase_type</field>
-        <field name="field_description">Purchase type</field>
-        <field name="ttype">selection</field>
-        <field name="model_id" ref="purchase.model_purchase_order"/>
-        <field name="index" eval="True"/>
-        <field name="readonly" eval="True"/>
-    </record>
-    <record id="x_purchase_type_field_selection_replenishment" model="ir.model.fields.selection">
-        <field name="name">Replenishment</field>
-        <field name="field_id" ref="x_purchase_type_field" />
-        <field name="value">replenishment</field>
-    </record>
-    <record id="x_purchase_type_field_selection_new" model="ir.model.fields.selection">
-        <field name="name">New releases</field>
-        <field name="field_id" ref="x_purchase_type_field" />
-        <field name="value">new</field>
-    </record>
+
     <record id="x_author_template_field" model="ir.model.fields">
         <field name="name">x_author</field>
         <field name="field_description">Author</field>
