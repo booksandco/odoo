@@ -1,0 +1,64 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<odoo noupdate="1">
+    <!-- Collect delivery product (service, free) -->
+    <record id="product_product_collect" model="product.product">
+        <field name="name">Collect</field>
+        <field name="type">service</field>
+        <field name="list_price">0.0</field>
+        <field name="sale_ok" eval="False"/>
+        <field name="purchase_ok" eval="False"/>
+    </record>
+
+    <!-- Collect Orders operation type (modelled on Delivery Orders) -->
+    <record id="picking_type_collect" model="stock.picking.type">
+        <field name="name">Collect Orders</field>
+        <field name="code">outgoing</field>
+        <field name="sequence_code">COL</field>
+        <field name="warehouse_id" ref="stock.warehouse0"/>
+        <field name="default_location_src_id" ref="stock.stock_location_output"/>
+        <field name="default_location_dest_id" ref="stock.stock_location_customers"/>
+    </record>
+
+    <!-- Collect route (shipping method selectable) -->
+    <record id="route_collect" model="stock.route">
+        <field name="name">Books &amp; Co Store: Collect in 2 steps (pick + collect)</field>
+        <field name="shipping_selectable" eval="True"/>
+    </record>
+
+    <!-- Pull rule: demand at Customers triggers pick from Stock -->
+    <record id="rule_collect_pull_pick" model="stock.rule">
+        <field name="name">WH: Stock → Customers</field>
+        <field name="action">pull</field>
+        <field name="picking_type_id" search="[('sequence_code', '=', 'PICK'), ('warehouse_id', '=', ref('stock.warehouse0'))]"/>
+        <field name="location_src_id" ref="stock.stock_location_stock"/>
+        <field name="location_dest_id" ref="stock.stock_location_customers"/>
+        <field name="route_id" ref="route_collect"/>
+    </record>
+    <record id="rule_collect_pull_delivery" model="stock.rule">
+        <field name="name">WH: Stock → Customers (copy)</field>
+        <field name="action">pull</field>
+        <field name="picking_type_id" ref="stock.picking_type_out"/>
+        <field name="location_src_id" ref="stock.stock_location_stock"/>
+        <field name="location_dest_id" ref="stock.stock_location_customers"/>
+        <field name="route_id" ref="route_collect"/>
+    </record>
+
+    <!-- Push rule: when goods arrive at Output, create Collect order -->
+    <record id="rule_collect_push" model="stock.rule">
+        <field name="name">WH: Output → Customers (collect)</field>
+        <field name="action">push</field>
+        <field name="picking_type_id" ref="picking_type_collect"/>
+        <field name="location_src_id" ref="stock.stock_location_output"/>
+        <field name="location_dest_id" ref="stock.stock_location_customers"/>
+        <field name="route_id" ref="route_collect"/>
+    </record>
+
+    <!-- Collect delivery carrier with route -->
+    <record id="delivery_carrier_collect" model="delivery.carrier">
+        <field name="name">Collect</field>
+        <field name="delivery_type">fixed</field>
+        <field name="product_id" ref="product_product_collect"/>
+        <field name="fixed_price">0.0</field>
+        <field name="route_ids" eval="[(6, 0, [ref('route_collect')])]"/>
+    </record>
+</odoo>
