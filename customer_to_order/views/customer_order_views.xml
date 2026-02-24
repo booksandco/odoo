@@ -39,7 +39,7 @@
                 <filter name="filter_on_order" string="On Order" domain="[('status', '=', 'on_order')]"/>
                 <filter name="filter_available" string="Available" domain="[('status', '=', 'available')]"/>
                 <separator/>
-                <group expand="0" string="Group By">
+                <group>
                     <filter name="group_customer" string="Customer" context="{'group_by': 'partner_id'}"/>
                     <filter name="group_vendor" string="Vendor" context="{'group_by': 'seller_id'}"/>
                     <filter name="group_status" string="Status" context="{'group_by': 'status'}"/>
