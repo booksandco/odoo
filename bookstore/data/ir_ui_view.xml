@@ -54,9 +54,7 @@
         <field name="priority">160</field>
         <field name="type">form</field>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='partner_ref']" position="after">
-                <field name="x_purchase_type"/>
-            </xpath>
+
             <xpath expr="//page[@name='products']/field[@name='order_line']//field[@name='name']" position="after">
                 <field name="x_isbn" optional="show"/>
             </xpath>
@@ -72,7 +70,6 @@
         <field name="type">list</field>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="after">
-                <field name="x_purchase_type" optional="show"/>
                 <field name="create_date" optional="show"/>
             </xpath>
         </field>
