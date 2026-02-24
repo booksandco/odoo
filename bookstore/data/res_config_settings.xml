@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <odoo noupdate="1">
-    <function model="res.lang" name="_activate_lang" eval="['en_NZ']"/>
+    <function model="res.lang" name="_activate_lang" eval="[[], 'en_NZ']"/>
     <record id="base.user_admin" model="res.users">
         <field name="lang">en_NZ</field>
     </record>
