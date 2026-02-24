@@ -1,5 +1,5 @@
 {
-    'name': 'Bookstore',
+    'name': 'NZ Bookstore',
     'version': '1.0',
     'category': 'Retail',
     'depends': [
@@ -59,22 +59,6 @@
         'data/mail_message.xml',
         'data/knowledge_tour.xml',
     ],
-    'demo': [
-        'demo/res_users.xml',
-        'demo/res_partner.xml',
-        'demo/product_supplierinfo.xml',
-        'demo/loyalty_program.xml',
-        'demo/loyalty_rule.xml',
-        'demo/loyalty_reward.xml',
-        'demo/loyalty_card.xml',
-        'demo/sale_order.xml',
-        'demo/sale_order_line.xml',
-        'demo/sale_order_confirm.xml',
-        'demo/stock_warehouse_orderpoint.xml',
-        'demo/purchase_order.xml',
-        'demo/purchase_order_line.xml',
-        'demo/purchase_order_confirm.xml',
-    ],
     'assets': {
         'web.assets_backend': [
             'bookstore/static/src/js/my_tour.js',
@@ -85,8 +69,6 @@
         "static/src/js/my_tour.js",
     ],
     'license': 'OEEL-1',
-    'author': 'Odoo S.A.',
+    'author': 'Harry Bird',
     'images': ['images/main.png'],
-    'url': "https://www.odoo.com/trial?industry&selected_app=bookstore",
-    'website': "https://www.odoo.com/industries/book-store",
 }
