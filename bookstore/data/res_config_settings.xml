@@ -4,6 +4,9 @@
         <field name="group_product_pricelist" eval="1"/>
         <field name="group_stock_adv_location" eval="1"/>
         <field name="lock_confirmed_po" eval="1"/>
+        <field name="chart_template">nz</field>
+        <field name="show_line_subtotals_tax_selection">tax_included</field>
+        <field name="attendance_barcode_source">scanner</field>
     </record>
     <function name="execute" model="res.config.settings" eval="[ref('res_config_setting_enable')]"/>
 </odoo>

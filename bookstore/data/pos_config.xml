@@ -1,10 +1,17 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <odoo noupdate="1">
-    <record id="pos_config_bookstore" model="pos.config">
-        <field name="name">My Bookstore</field>
+    <record id="pos_config_register_1" model="pos.config">
+        <field name="name">Register 1</field>
         <field name="use_pricelist" eval="1"/>
         <field name="pricelist_id" ref="product_pricelist_1"/>
         <field name="available_pricelist_ids" eval="[(6, 0, [ref('product_pricelist_1'), ref('product_pricelist_2'), ref('product_pricelist_3')])]"/>
-        <field name="payment_method_ids" eval="[(6, 0, [ref('pos_payment_method_1')])]"/>
+        <field name="payment_method_ids" eval="[(6, 0, [ref('pos_payment_method_cash_r1'), ref('pos_payment_method_account'), ref('pos_payment_method_eftpos')])]"/>
+    </record>
+    <record id="pos_config_register_2" model="pos.config">
+        <field name="name">Register 2</field>
+        <field name="use_pricelist" eval="1"/>
+        <field name="pricelist_id" ref="product_pricelist_1"/>
+        <field name="available_pricelist_ids" eval="[(6, 0, [ref('product_pricelist_1'), ref('product_pricelist_2'), ref('product_pricelist_3')])]"/>
+        <field name="payment_method_ids" eval="[(6, 0, [ref('pos_payment_method_cash_r2'), ref('pos_payment_method_account'), ref('pos_payment_method_eftpos')])]"/>
     </record>
 </odoo>
