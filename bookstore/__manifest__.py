@@ -47,7 +47,6 @@
         'data/ir_ui_view.xml',
         'data/base_automation.xml',
         'data/ir_actions_server.xml',
-        'data/ir_default.xml',
         'data/pos_category.xml',
         'data/product_category.xml',
         'data/product_pricelist.xml',

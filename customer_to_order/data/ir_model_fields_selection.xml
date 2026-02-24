@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<odoo>
-    <record id="x_purchase_type_field_selection_customer_order" model="ir.model.fields.selection">
-        <field name="name">Customer order</field>
-        <field name="field_id" ref="bookstore.x_purchase_type_field"/>
-        <field name="value">customer_order</field>
-    </record>
-</odoo>
