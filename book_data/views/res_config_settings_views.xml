@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Settings view not needed - fields with config_parameter auto-appear in Settings -->
+</odoo>
