@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Override the search result item template to include author and publisher as subtitles -->
+        <template id="search_result_item" inherit_id="website.one_hybrid" name="Search Result with Author and Publisher">
+            <xpath expr="//div[@class='o_search_result_item_detail px-3']/div[@class='h6 fw-bold']" position="after">
+                <small t-if="result.get('subtitle_text')" class="text-muted d-block">
+                    <t t-out="result.get('subtitle_text')"/>
+                </small>
+            </xpath>
+        </template>
+    </data>
+</odoo>

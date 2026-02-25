@@ -1,6 +1,6 @@
 {
     'name': 'Web Search',
-    'version': '1.0',
+    'version': '1.1',
     'category': 'Website',
     'depends': [
         'bookstore',
@@ -8,4 +8,7 @@
     ],
     'license': 'OEEL-1',
     'author': 'Odoo S.A.',
+    'data': [
+        'views/search_templates.xml',
+    ],
 }
