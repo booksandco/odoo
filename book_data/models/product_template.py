@@ -142,8 +142,11 @@ class ProductTemplate(models.Model):
         vals = {}
         book = edition.get('book') or {}
 
-        # Title
+        # Title (with optional subtitle)
         title = edition.get('title') or book.get('title')
+        subtitle = edition.get('subtitle')
+        if subtitle and title:
+            title = f"{title}: {subtitle}"
         if title and not self.name:
             vals['name'] = title
 
@@ -152,14 +155,14 @@ class ProductTemplate(models.Model):
         if description and not self.description_ecommerce:
             vals['description_ecommerce'] = f'<p>{description}</p>'
 
-        # Author
+        # Author - contributions are in the book
         contributions = book.get('contributions') or []
         authors = [c['author']['name'] for c in contributions if c.get('author', {}).get('name')]
         if authors and not self.x_author:
             vals['x_author'] = ', '.join(authors)
 
-        # Publisher
-        publisher = book.get('publisher')
+        # Publisher - now at edition level
+        publisher = edition.get('publisher')
         if publisher and isinstance(publisher, dict):
             publisher_name = publisher.get('name')
             if publisher_name and not self.x_publisher:
