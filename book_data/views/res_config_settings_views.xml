@@ -3,9 +3,9 @@
     <record id="res_config_settings_view_form_book_data" model="ir.ui.view">
         <field name="name">res.config.settings.view.form.inherit.book_data</field>
         <field name="model">res.config.settings</field>
-        <field name="inherit_id" ref="stock.view_stock_config_settings"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//block[@name='barcode_setting_container']" position="after">
+            <xpath expr="//div[@id='general_settings']" position="inside">
                 <block title="Book Data" name="book_data_setting_container">
                     <setting id="hardcover_api_key_setting" string="Hardcover API" help="Fetch book metadata (description, author, image, publication date) from Hardcover.">
                         <field name="hardcover_api_key" placeholder="e.g. your-hardcover-api-token" password="True"/>
