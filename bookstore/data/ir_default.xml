@@ -16,4 +16,8 @@
         <field name="field_id" ref="website_sale.field_product_template__is_published"/>
         <field name="json_value">true</field>
     </record>
+    <record id="default_product_list_price" model="ir.default">
+        <field name="field_id" ref="product.field_product_template__list_price"/>
+        <field name="json_value">0</field>
+    </record>
 </odoo>
