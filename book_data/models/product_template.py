@@ -37,36 +37,31 @@ query GetBookByISBN($isbn: String!) {
 class ProductTemplate(models.Model):
     _inherit = 'product.template'
 
-    def action_fetch_hardcover_data(self):
-        """Fetch book metadata from Hardcover API and populate product fields."""
-        self.ensure_one()
-
-        isbn = self.barcode
-        if not isbn or not isbn.startswith('978'):
-            raise UserError(_("A valid ISBN-13 (starting with 978) is required to fetch data from Hardcover."))
+    @api.onchange('barcode')
+    def _onchange_barcode_fetch_hardcover(self):
+        """Automatically fetch Hardcover data when ISBN barcode is entered/updated."""
+        if not self.barcode or not self.barcode.startswith('978'):
+            return
 
         api_key = self.env['ir.config_parameter'].sudo().get_param('book_data.hardcover_api_key')
         if not api_key:
-            raise UserError(_("Hardcover API key is not configured. Go to Settings > Inventory > Book Data to set it."))
+            _logger.debug("Hardcover API key not configured; skipping automatic fetch")
+            return
 
-        edition = self._hardcover_fetch_edition(isbn, api_key)
-        if not edition:
-            raise UserError(_("No book found on Hardcover for ISBN %s.", isbn))
+        try:
+            edition = self._hardcover_fetch_edition(self.barcode, api_key)
+            if not edition:
+                _logger.debug(f"No Hardcover data found for ISBN {self.barcode}")
+                return
 
-        vals = self._hardcover_parse_edition(edition)
-        if vals:
-            self.write(vals)
-
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _("Hardcover"),
-                'message': _("Book data fetched successfully."),
-                'type': 'success',
-                'sticky': False,
-            },
-        }
+            vals = self._hardcover_parse_edition(edition)
+            if vals:
+                self.update(vals)
+                _logger.info(f"Hardcover data auto-populated for ISBN {self.barcode}")
+        except UserError as e:
+            _logger.warning(f"Failed to fetch Hardcover data for ISBN {self.barcode}: {e}")
+        except Exception as e:
+            _logger.warning(f"Unexpected error fetching Hardcover data: {e}")
 
     @api.model
     def _hardcover_fetch_edition(self, isbn, api_key):
