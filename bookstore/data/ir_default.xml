@@ -13,7 +13,7 @@
         <field name="json_value">false</field>
     </record>
     <record id="default_product_is_published" model="ir.default">
-        <field name="field_id" ref="website.field_product_template__is_published"/>
+        <field name="field_id" ref="website_sale.field_product_template__is_published"/>
         <field name="json_value">true</field>
     </record>
 </odoo>
