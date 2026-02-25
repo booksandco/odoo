@@ -48,4 +48,10 @@ for template in self:
         <field name="ttype">char</field>
         <field name="model_id" ref="product.model_product_template"/>
     </record>
+    <record id="x_publication_date_template_field" model="ir.model.fields">
+        <field name="name">x_publication_date</field>
+        <field name="field_description">Publication Date</field>
+        <field name="ttype">date</field>
+        <field name="model_id" ref="product.model_product_template"/>
+    </record>
 </odoo>
