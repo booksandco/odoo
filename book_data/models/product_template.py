@@ -45,23 +45,49 @@ class ProductTemplate(models.Model):
 
         api_key = self.env['ir.config_parameter'].sudo().get_param('book_data.hardcover_api_key')
         if not api_key:
-            _logger.debug("Hardcover API key not configured; skipping automatic fetch")
-            return
+            return {
+                'warning': {
+                    'title': _('Hardcover API Not Configured'),
+                    'message': _('Configure your Hardcover API key in Settings > Inventory > Barcode to auto-fetch book data.'),
+                }
+            }
 
         try:
             edition = self._hardcover_fetch_edition(self.barcode, api_key)
             if not edition:
-                _logger.debug(f"No Hardcover data found for ISBN {self.barcode}")
-                return
+                return {
+                    'warning': {
+                        'title': _('Book Not Found'),
+                        'message': _('No book found on Hardcover for ISBN %s.') % self.barcode,
+                    }
+                }
 
             vals = self._hardcover_parse_edition(edition)
             if vals:
                 self.update(vals)
-                _logger.info(f"Hardcover data auto-populated for ISBN {self.barcode}")
+                populated_fields = ', '.join(vals.keys())
+                return {
+                    'warning': {
+                        'title': _('Book Data Fetched'),
+                        'message': _('Successfully populated: %s') % populated_fields,
+                    }
+                }
         except UserError as e:
             _logger.warning(f"Failed to fetch Hardcover data for ISBN {self.barcode}: {e}")
+            return {
+                'warning': {
+                    'title': _('Hardcover API Error'),
+                    'message': _('Failed to fetch data from Hardcover API. Please try again later.'),
+                }
+            }
         except Exception as e:
             _logger.warning(f"Unexpected error fetching Hardcover data: {e}")
+            return {
+                'warning': {
+                    'title': _('Error'),
+                    'message': _('An unexpected error occurred while fetching book data.'),
+                }
+            }
 
     @api.model
     def _hardcover_fetch_edition(self, isbn, api_key):

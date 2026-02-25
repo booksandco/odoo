@@ -19,7 +19,11 @@ A module that enhances product management for bookstores by fetching book metada
 2. **API Request**: The module queries the Hardcover GraphQL API with the ISBN
 3. **Data Parsing**: Response data is parsed and formatted for Odoo fields
 4. **Field Population**: Only empty fields are populated (existing data is never overwritten)
-5. **Silent Operation**: Fetching happens in the background without interrupting the user
+5. **User Notification**: A popup message appears showing:
+   - Success message listing which fields were populated
+   - "Book Not Found" if the ISBN doesn't exist on Hardcover
+   - "API Not Configured" if the API key is not set
+   - Error message if the API request fails
 
 ## Setup
 
@@ -43,8 +47,10 @@ A module that enhances product management for bookstores by fetching book metada
 1. Go to **Inventory** → **Products** → **Products**
 2. Open or create a product
 3. Enter an ISBN-13 barcode (format: 978XXXXXXXXXXX)
-4. Move to the next field or save
-5. The system will automatically fetch and populate the book metadata in the background
+4. Move to the next field - a popup will appear showing what happened:
+   - Which fields were populated (title, author, publisher, etc.)
+   - Or an error/warning message if something went wrong
+5. The product is automatically updated with the fetched data
 
 ## Custom Fields
 
@@ -65,6 +71,6 @@ The module uses the following custom fields (defined in the bookstore module):
 - Existing field values are never overwritten; only empty fields are populated
 - API requests include a 10-second timeout
 - Images are downloaded and stored as base64 in the product
-- Fetching happens silently in the background via the `@api.onchange('barcode')` handler
-- If the API key is not configured, barcode entry will work normally without fetching
-- API failures are logged but don't interrupt the user workflow
+- Fetching happens automatically via the `@api.onchange('barcode')` handler
+- User is notified via popup messages about success, errors, or missing configuration
+- If the API key is not configured, the user is prompted to add it
