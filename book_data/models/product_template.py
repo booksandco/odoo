@@ -13,6 +13,7 @@ HARDCOVER_EDITION_QUERY = """
 query GetBookByISBN($isbn: String!) {
     editions(where: { isbn_13: { _eq: $isbn } }) {
         isbn_13
+        isbn
         title
         release_date
         cached_image
@@ -92,23 +93,37 @@ class ProductTemplate(models.Model):
     @api.model
     def _hardcover_fetch_edition(self, isbn, api_key):
         """Fetch edition data from Hardcover GraphQL API."""
+        # Strip whitespace from ISBN
+        isbn_clean = isbn.strip()
+        
         headers = {
             'Content-Type': 'application/json',
             'Authorization': f'Bearer {api_key}',
         }
         try:
+            _logger.debug(f"Querying Hardcover API for ISBN: {isbn_clean}")
             response = requests.post(
                 HARDCOVER_API_URL,
-                json={'query': HARDCOVER_EDITION_QUERY, 'variables': {'isbn': isbn}},
+                json={'query': HARDCOVER_EDITION_QUERY, 'variables': {'isbn': isbn_clean}},
                 headers=headers,
                 timeout=10,
             )
             response.raise_for_status()
             data = response.json()
+            
+            # Log the response for debugging
+            if 'errors' in data:
+                _logger.warning(f"Hardcover API errors for ISBN {isbn_clean}: {data['errors']}")
+                return None
+            
             editions = data.get('data', {}).get('editions', [])
+            _logger.debug(f"Hardcover API returned {len(editions)} editions for ISBN {isbn_clean}")
+            if editions:
+                edition_isbn = editions[0].get('isbn_13') or editions[0].get('isbn')
+                _logger.debug(f"First edition found with ISBN: {edition_isbn}")
             return editions[0] if editions else None
-        except requests.RequestException:
-            _logger.exception("Hardcover API request failed for ISBN %s", isbn)
+        except requests.RequestException as e:
+            _logger.exception("Hardcover API request failed for ISBN %s: %s", isbn_clean, str(e))
             raise UserError(_("Failed to connect to Hardcover API. Please try again later."))
 
     def _hardcover_parse_edition(self, edition):
