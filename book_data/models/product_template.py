@@ -13,7 +13,6 @@ HARDCOVER_EDITION_QUERY = """
 query GetBookByISBN($isbn: String!) {
     editions(where: { isbn_13: { _eq: $isbn } }) {
         isbn_13
-        isbn
         title
         release_date
         cached_image
