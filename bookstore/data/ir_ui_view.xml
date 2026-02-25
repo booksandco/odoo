@@ -59,22 +59,7 @@
             </xpath>
         </field>
     </record>
-    <record id="stock_warehouse_orderpoint_reorder_search_customization_view" model="ir.ui.view">
-        <field name="name">stock.warehouse.orderpoint.reorder.search customization</field>
-        <field name="inherit_id" ref="stock.stock_reorder_report_search"/>
-        <field name="model">stock.warehouse.orderpoint</field>
-        <field name="active" eval="True"/>
-        <field name="mode">extension</field>
-        <field name="priority">160</field>
-        <field name="type">search</field>
-        <field name="arch" type="xml">
-            <xpath expr="//filter[@name='filter_not_snoozed']" position="after">
-                <separator/>
-                <filter name="filter_last_7_days" string="Last 7 Days"
-                    domain="[('x_last_sale_stock', '&gt;', (context_today()-relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
-            </xpath>
-        </field>
-    </record>
+
     <record id="product_product_view_form_normalized" model="ir.ui.view">
         <field name="name">product.product.view.form.normalized.account.inherit</field>
         <field name="model">product.product</field>

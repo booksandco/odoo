@@ -607,7 +607,6 @@ msgstr "Сүүлийн 7 хоног"
 
 #. module: bookstore
 #: model:ir.model.fields,field_description:bookstore.x_last_sale_date_field
-#: model:ir.model.fields,field_description:bookstore.x_last_sale_stock_field
 msgid "Last Sale"
 msgstr ""
 
