@@ -10,13 +10,13 @@
                 <header>
                     <button name="action_create_po" type="object" string="Order" class="btn-primary"/>
                 </header>
-                <field name="partner_id" string="Customer"/>
-                <field name="sale_order_id" string="Sale Order"/>
-                <field name="product_id"/>
+                <field name="partner_id" string="Customer" widget="many2one_link"/>
+                <field name="sale_order_id" string="Sale Order" widget="many2one_link"/>
+                <field name="product_id" widget="many2one_link"/>
                 <field name="qty_ordered"/>
                 <field name="qty_delivered"/>
                 <field name="qty_to_deliver"/>
-                <field name="seller_id" string="Vendor"/>
+                <field name="seller_id" string="Vendor" widget="many2one_link"/>
                 <field name="status" widget="badge"
                     decoration-success="status == 'available'"
                     decoration-info="status == 'on_order'"
