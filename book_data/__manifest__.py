@@ -1,6 +1,6 @@
 {
     'name': 'Book Data',
-    'version': '1.4',
+    'version': '1.5',
     'category': 'Retail',
     'summary': 'Fetch book metadata from external APIs (Hardcover)',
     'description': """
@@ -16,5 +16,5 @@ Populates description, author, image, and publication date on products.
         'views/res_config_settings_views.xml',
     ],
     'license': 'OEEL-1',
-    'author': 'Odoo S.A.',
+    'author': 'Harry Bird',
 }

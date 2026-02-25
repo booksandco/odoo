@@ -54,6 +54,10 @@ class ProductTemplate(models.Model):
         """Automatically fetch Hardcover data when ISBN barcode is entered/updated."""
         if not self.barcode or not self.barcode.startswith('978'):
             return
+        
+        # Copy barcode to internal reference field
+        if self.barcode and not self.default_code:
+            self.default_code = self.barcode
 
         api_key = self.env['ir.config_parameter'].sudo().get_param('book_data.hardcover_api_key')
         if not api_key:

@@ -54,9 +54,6 @@
         <field name="priority">160</field>
         <field name="type">form</field>
         <field name="arch" type="xml">
-            <xpath expr="//page[@name='products']/field[@name='order_line']//field[@name='name']" position="after">
-                <field name="x_isbn" optional="show"/>
-            </xpath>
         </field>
     </record>
     <record id="purchase_order_inherit_purchase_order_tree_customization_view" model="ir.ui.view">
