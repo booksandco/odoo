@@ -1,12 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Override the search result item template to include author and publisher as subtitles -->
+        <!-- Override the search result item template to include author and publisher as separate lines -->
         <template id="search_result_item" inherit_id="website.one_hybrid" name="Search Result with Author and Publisher">
             <xpath expr="//div[@class='o_search_result_item_detail px-3']/div[1]" position="after">
-                <small t-if="result.get('subtitle_text')" class="text-muted d-block">
-                    <t t-out="result.get('subtitle_text')"/>
+                <small t-if="result.get('x_author')" class="text-muted d-block">
+                    <t t-out="result.get('x_author')"/>
                 </small>
+                <small t-if="result.get('x_publisher')" class="text-muted d-block">
+                    <t t-out="result.get('x_publisher')"/>
+                </small>
+            </xpath>
+        </template>
+
+        <!-- Override the product tile template to show author and publisher next to description -->
+        <template id="product_tile_author_publisher" inherit_id="website_sale.products_item" name="Product Tile with Author and Publisher">
+            <xpath expr="//div[@class='oe_subdescription_wrapper']/div[@class='oe_subdescription text-muted small']/div" position="after">
+                <div t-if="product.x_author or product.x_publisher" class="o_wsale_product_author_publisher small text-muted mt-1">
+                    <div t-if="product.x_author" t-out="product.x_author"/>
+                    <div t-if="product.x_publisher" t-out="product.x_publisher"/>
+                </div>
             </xpath>
         </template>
     </data>
