@@ -13,7 +13,6 @@ Populates description, author, image, and publication date on products.
     'data': [
         'security/ir.model.access.csv',
         'data/ir_model_fields.xml',
-        'views/res_config_settings_views.xml',
         'views/product_template_views.xml',
     ],
     'license': 'OEEL-1',
