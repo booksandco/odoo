@@ -5,14 +5,13 @@
         <field name="model">res.config.settings</field>
         <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//form" position="inside">
-                <separator string="Book Data"/>
+            <xpath expr="//div[@id='barcode_setting_container']" position="inside">
                 <div class="row mt16 o_settings_container">
                     <div class="col-xs-12 col-md-6 o_setting_box">
                         <div class="o_setting_right_pane">
-                            <label for="hardcover_api_key"/>
+                            <label for="hardcover_api_key" string="Hardcover API Key"/>
                             <field name="hardcover_api_key" placeholder="e.g. your-hardcover-api-token"/>
-                            <div class="text-muted">
+                            <div class="text-muted small">
                                 Get your API key from <a href="https://hardcover.app/account/api" target="_blank">hardcover.app</a>
                             </div>
                         </div>
