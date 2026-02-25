@@ -11,26 +11,38 @@ HARDCOVER_API_URL = 'https://api.hardcover.app/v1/graphql'
 
 HARDCOVER_EDITION_QUERY = """
 query GetBookByISBN($isbn: String!) {
-    editions(where: { isbn_13: { _eq: $isbn } }) {
-        isbn_13
-        title
-        release_date
-        cached_image
-        book {
-            title
-            description
-            publisher_id
-            publisher {
-                name
-            }
-            contributions {
-                author {
-                    name
-                }
-            }
-        }
-    }
-}
+			editions(where: { isbn_13: { _eq: $isbn } }) {
+				isbn_13
+				isbn_10
+				title
+				subtitle
+				edition_format
+				pages
+				release_date
+				edition_information
+				cached_image
+				publisher {
+					name
+				}
+				language {
+					language
+				}
+				country {
+					name
+				}
+				book {
+					title
+					description
+					cached_tags
+					contributions {
+						contribution
+						author {
+							name
+						}
+					}
+				}
+			}
+		}
 """
 
 
