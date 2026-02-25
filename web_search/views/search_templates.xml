@@ -3,7 +3,7 @@
     <data>
         <!-- Override the search result item template to include author and publisher as separate lines -->
         <template id="search_result_item" inherit_id="website.one_hybrid" name="Search Result with Author and Publisher">
-            <xpath expr="//div[@class='o_search_result_item_detail px-3']/div[1]" position="after">
+            <xpath expr="//div[@class='o_search_result_item_detail px-3']" position="inside">
                 <small t-if="result.get('x_author')" class="text-muted d-block">
                     <t t-out="result.get('x_author')"/>
                 </small>
@@ -20,6 +20,14 @@
                     <div t-if="product.x_author" t-out="product.x_author"/>
                     <div t-if="product.x_publisher" t-out="product.x_publisher"/>
                 </div>
+            </xpath>
+        </template>
+
+        <!-- Override the searchbar input to include author and publisher display toggles -->
+        <template id="searchbar_with_author_publisher" inherit_id="website.website_search_box_input" name="Searchbar with Author and Publisher">
+            <xpath expr="//input[@name='search']" position="attributes">
+                <attribute name="t-att-data-display-author">display_author or 'true'</attribute>
+                <attribute name="t-att-data-display-publisher">display_publisher or 'true'</attribute>
             </xpath>
         </template>
     </data>
