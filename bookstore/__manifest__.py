@@ -1,6 +1,6 @@
 {
     'name': 'Bookstore',
-    'version': '1.5',
+    'version': '1.6',
     'category': 'Retail',
     'depends': [
         'account',
@@ -40,6 +40,7 @@
         'website_sale',
     ],
     'data': [
+        'data/ir_default.xml',
         'data/res_config_settings.xml',
         'data/stock_warehouse.xml',
         'data/ir_attachment_pre.xml',
