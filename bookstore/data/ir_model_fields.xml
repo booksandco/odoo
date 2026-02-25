@@ -14,13 +14,7 @@ for template in self:
     template['x_last_sale_date'] = date_map.get(template.product_variant_id.id, False)
 ]]></field>
     </record>
-    <record id="x_last_sale_stock_field" model="ir.model.fields">
-        <field name="name">x_last_sale_stock</field>
-        <field name="field_description">Last Sale</field>
-        <field name="ttype">date</field>
-        <field name="related">product_tmpl_id.x_last_sale_date</field>
-        <field name="model_id" ref="stock.model_stock_warehouse_orderpoint"/>
-    </record>
+
     <record id="x_last_vendor_template_field" model="ir.model.fields">
         <field name="name">x_last_vendor</field>
         <field name="field_description">Last Vendor</field>
