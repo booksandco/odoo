@@ -9,7 +9,7 @@
         <field name="json_value">true</field>
     </record>
     <record id="default_product_allow_out_of_stock_order" model="ir.default">
-        <field name="field_id" ref="website_sale.field_product_template__allow_out_of_stock_order"/>
+        <field name="field_id" ref="website_sale_stock.field_product_template__allow_out_of_stock_order"/>
         <field name="json_value">false</field>
     </record>
     <record id="default_product_is_published" model="ir.default">
