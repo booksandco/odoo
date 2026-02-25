@@ -6,6 +6,7 @@
         <field name="arch" type="xml">
             <list decoration-success="status == 'available'"
                   decoration-info="status == 'on_order'"
+                  decoration-warning="status == 'in_cart'"
                   decoration-danger="status == 'unordered'">
                 <header>
                     <button name="action_create_po" type="object" string="Order" class="btn-primary"/>
@@ -17,9 +18,11 @@
                 <field name="qty_delivered"/>
                 <field name="qty_to_deliver"/>
                 <field name="seller_id" string="Vendor" widget="many2one_link"/>
+                <field name="purchase_order_id" string="Purchase Order" widget="many2one_link" optional="show"/>
                 <field name="status" widget="badge"
                     decoration-success="status == 'available'"
                     decoration-info="status == 'on_order'"
+                    decoration-warning="status == 'in_cart'"
                     decoration-danger="status == 'unordered'"/>
             </list>
         </field>
@@ -37,6 +40,7 @@
                 <separator/>
                 <filter name="filter_unordered" string="Unordered" domain="[('status', '=', 'unordered')]"/>
                 <filter name="filter_on_order" string="On Order" domain="[('status', '=', 'on_order')]"/>
+                <filter name="filter_in_cart" string="In Cart" domain="[('status', '=', 'in_cart')]"/>
                 <filter name="filter_available" string="Available" domain="[('status', '=', 'available')]"/>
                 <separator/>
                 <group>

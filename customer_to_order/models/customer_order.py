@@ -13,12 +13,14 @@ class CustomerOrder(models.Model):
     product_id = fields.Many2one('product.product', string='Product', readonly=True)
     product_tmpl_id = fields.Many2one('product.template', readonly=True)
     seller_id = fields.Many2one('res.partner', string='Vendor', readonly=True)
+    purchase_order_id = fields.Many2one('purchase.order', string='Purchase Order', readonly=True)
     qty_ordered = fields.Float(string='Qty Ordered', readonly=True)
     qty_delivered = fields.Float(string='Qty Delivered', readonly=True)
     qty_to_deliver = fields.Float(string='Qty to Deliver', readonly=True)
     status = fields.Selection([
         ('available', 'Available'),
         ('on_order', 'On Order'),
+        ('in_cart', 'In Cart'),
         ('unordered', 'Unordered'),
     ], string='Status', readonly=True)
 
@@ -41,6 +43,16 @@ class CustomerOrder(models.Model):
                         ORDER BY ps.sequence, ps.id
                         LIMIT 1
                     ) AS seller_id,
+                    (
+                        SELECT po.id
+                        FROM purchase_order_line pol
+                        JOIN purchase_order po ON po.id = pol.order_id
+                        WHERE pol.product_id = sol.product_id
+                        AND po.state IN ('draft', 'sent', 'to approve', 'purchase')
+                        AND pol.qty_received < pol.product_qty
+                        ORDER BY po.state = 'purchase' DESC, po.id DESC
+                        LIMIT 1
+                    ) AS purchase_order_id,
                     sol.product_uom_qty AS qty_ordered,
                     COALESCE(sol.qty_delivered, 0) AS qty_delivered,
                     (sol.product_uom_qty - COALESCE(sol.qty_delivered, 0)) AS qty_to_deliver,
@@ -52,9 +64,17 @@ class CustomerOrder(models.Model):
                             FROM purchase_order_line pol
                             JOIN purchase_order po ON po.id = pol.order_id
                             WHERE pol.product_id = sol.product_id
-                            AND po.state IN ('draft', 'sent', 'to approve', 'purchase')
+                            AND po.state = 'purchase'
                             AND pol.qty_received < pol.product_qty
                         ) THEN 'on_order'
+                        WHEN EXISTS (
+                            SELECT 1
+                            FROM purchase_order_line pol
+                            JOIN purchase_order po ON po.id = pol.order_id
+                            WHERE pol.product_id = sol.product_id
+                            AND po.state IN ('draft', 'sent', 'to approve')
+                            AND pol.qty_received < pol.product_qty
+                        ) THEN 'in_cart'
                         ELSE 'unordered'
                     END AS status
                 FROM sale_order_line sol
