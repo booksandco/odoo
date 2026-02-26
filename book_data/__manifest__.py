@@ -15,6 +15,6 @@ Populates description, author, image, publication date, and AU/NZ pricing on pro
         'data/ir_model_fields.xml',
         'views/res_config_settings_views.xml',
     ],
-    'license': 'OEEL-1',
+    'license': 'LGPL-3',
     'author': 'Harry Bird',
 }

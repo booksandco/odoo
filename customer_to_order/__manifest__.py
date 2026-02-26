@@ -11,6 +11,6 @@
         'security/ir.model.access.csv',
         'views/customer_order_views.xml',
     ],
-    'license': 'OEEL-1',
-    'author': 'Odoo S.A.',
+    'license': 'LGPL-3',
+    'author': 'Harry Bird',
 }
