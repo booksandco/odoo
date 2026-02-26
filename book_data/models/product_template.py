@@ -343,7 +343,8 @@ class ProductTemplate(models.Model):
                     measurement = self._titlepage_find(measure, 'Measurement')
                     if measurement is not None and measurement.text:
                         try:
-                            vals['weight'] = float(measurement.text)
+                            grams = float(measurement.text)
+                            vals['weight'] = grams / 1000.0
                         except ValueError:
                             pass
                     break
