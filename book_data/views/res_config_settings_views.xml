@@ -7,11 +7,17 @@
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
                 <div id="book_data_settings">
-                    <block name="book_data" title="Hardcover (Book Data)" class="mt-3">
+                    <block name="book_data" title="Book Data APIs" class="mt-3">
                         <setting>
                             <field name="hardcover_api_key" nolabel="1" placeholder="Hardcover API Key (e.g., your-hardcover-api-token)"/>
                             <div class="text-muted small mt-1">
                                 Get your API key from <a href="https://hardcover.app/account/api" target="_blank">hardcover.app</a>
+                            </div>
+                        </setting>
+                        <setting>
+                            <field name="titlepage_api_token" nolabel="1" placeholder="Titlepage API Token"/>
+                            <div class="text-muted small mt-1">
+                                Get your API token from <a href="https://www.titlepage.com" target="_blank">titlepage.com</a> — provides AU/NZ pricing and ONIX metadata
                             </div>
                         </setting>
                     </block>
