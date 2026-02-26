@@ -1,11 +1,25 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <odoo noupdate="1">
-    <record id="cash" model="account.journal">
-        <field name="name">Cash (Bookstore)</field>
+    <record id="journal_cash_r1" model="account.journal">
+        <field name="name">Cash R1</field>
         <field name="type">cash</field>
     </record>
-    <record id="pos_payment_method_1" model="pos.payment.method">
-        <field name="name">Cash</field>
-        <field name="journal_id" ref="cash"/>
+    <record id="journal_cash_r2" model="account.journal">
+        <field name="name">Cash R2</field>
+        <field name="type">cash</field>
+    </record>
+    <record id="pos_payment_method_cash_r1" model="pos.payment.method">
+        <field name="name">Cash R1</field>
+        <field name="journal_id" ref="journal_cash_r1"/>
+    </record>
+    <record id="pos_payment_method_cash_r2" model="pos.payment.method">
+        <field name="name">Cash R2</field>
+        <field name="journal_id" ref="journal_cash_r2"/>
+    </record>
+    <record id="pos_payment_method_account" model="pos.payment.method">
+        <field name="name">Account</field>
+    </record>
+    <record id="pos_payment_method_eftpos" model="pos.payment.method">
+        <field name="name">Eftpos</field>
     </record>
 </odoo>

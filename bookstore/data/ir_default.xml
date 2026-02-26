@@ -1,3 +1,23 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<odoo noupdate="1">
+<odoo>
+    <record id="default_product_available_in_pos" model="ir.default">
+        <field name="field_id" ref="point_of_sale.field_product_template__available_in_pos"/>
+        <field name="json_value">true</field>
+    </record>
+    <record id="default_product_is_storable" model="ir.default">
+        <field name="field_id" ref="stock.field_product_template__is_storable"/>
+        <field name="json_value">true</field>
+    </record>
+    <record id="default_product_allow_out_of_stock_order" model="ir.default">
+        <field name="field_id" ref="website_sale_stock.field_product_template__allow_out_of_stock_order"/>
+        <field name="json_value">false</field>
+    </record>
+    <record id="default_product_is_published" model="ir.default">
+        <field name="field_id" ref="website_sale.field_product_template__is_published"/>
+        <field name="json_value">true</field>
+    </record>
+    <record id="default_product_list_price" model="ir.default">
+        <field name="field_id" ref="product.field_product_template__list_price"/>
+        <field name="json_value">0</field>
+    </record>
 </odoo>

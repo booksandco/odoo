@@ -693,7 +693,6 @@ msgstr "最近7天"
 
 #. module: bookstore
 #: model:ir.model.fields,field_description:bookstore.x_last_sale_date_field
-#: model:ir.model.fields,field_description:bookstore.x_last_sale_stock_field
 msgid "Last Sale"
 msgstr "最新销售"
 
