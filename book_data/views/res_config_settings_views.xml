@@ -6,17 +6,17 @@
         <field name="inherit_id" ref="stock.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//block[@name='barcode_setting_container']" position="inside">
-                <setting string="Hardcover API" help="Fetch book metadata from Hardcover when ISBN is scanned">
+                <setting id="book_data_hardcover" string="Hardcover API" help="">
                     <field name="hardcover_api_key" nolabel="1" placeholder="Hardcover API Key"/>
-                    <div class="text-muted small mt-1">
+                    <span class="text-muted">
                         Get your API key from <a href="https://hardcover.app/account/api" target="_blank">hardcover.app</a>
-                    </div>
+                    </span>
                 </setting>
-                <setting string="Titlepage API" help="Fetch ONIX metadata and NZ pricing from Titlepage">
+                <setting id="book_data_titlepage" string="Titlepage API" help="">
                     <field name="titlepage_api_token" nolabel="1" placeholder="Titlepage API Token"/>
-                    <div class="text-muted small mt-1">
+                    <span class="text-muted">
                         Get your API token from <a href="https://www.titlepage.com" target="_blank">titlepage.com</a>
-                    </div>
+                    </span>
                 </setting>
             </xpath>
         </field>
