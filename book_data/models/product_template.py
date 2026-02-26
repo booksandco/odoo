@@ -335,12 +335,26 @@ class ProductTemplate(models.Model):
                                 vals['image_1920'] = image_data
                     break
 
-        # List price (NZ RRP - PriceType 02, rounded up from .99 to .00)
+        # Weight (MeasureType 08 = weight)
+        if descriptive is not None and not self.weight:
+            for measure in self._titlepage_findall(descriptive, 'Measure'):
+                mtype = self._titlepage_find(measure, 'MeasureType')
+                if mtype is not None and mtype.text == '08':
+                    measurement = self._titlepage_find(measure, 'Measurement')
+                    if measurement is not None and measurement.text:
+                        try:
+                            vals['weight'] = float(measurement.text)
+                        except ValueError:
+                            pass
+                    break
+
+        # NZ supply: list price (PriceType 02, rounded up) and vendor from supplier name
         for ps in self._titlepage_findall(product, 'ProductSupply'):
             market_territory = self._titlepage_find(ps, 'Market/Territory/CountriesIncluded')
             if market_territory is not None and 'NZ' in market_territory.text:
                 supply = self._titlepage_find(ps, 'SupplyDetail')
                 if supply is not None:
+                    # List price
                     for price_el in self._titlepage_findall(supply, 'Price'):
                         price_type = self._titlepage_find(price_el, 'PriceType')
                         if price_type is not None and price_type.text == '02':
@@ -352,6 +366,28 @@ class ProductTemplate(models.Model):
                                 except ValueError:
                                     pass
                             break
+                    # Vendor from supplier name
+                    supplier_name_el = self._titlepage_find(supply, 'Supplier/SupplierName')
+                    if supplier_name_el is not None and supplier_name_el.text:
+                        self._titlepage_set_vendor(supplier_name_el.text)
                 break
 
         return vals
+
+    def _titlepage_set_vendor(self, supplier_name):
+        """Match supplier name to a res.partner and add as vendor if not already present."""
+        partner = self.env['res.partner'].search(
+            [('name', 'ilike', supplier_name)], limit=1,
+        )
+        if not partner:
+            _logger.info("No partner found matching Titlepage supplier: %s", supplier_name)
+            return
+        # Check if this partner is already a vendor on the product
+        if partner in self.seller_ids.mapped('partner_id'):
+            return
+        self.update({
+            'seller_ids': [(0, 0, {
+                'partner_id': partner.id,
+                'min_qty': 1,
+            })],
+        })
