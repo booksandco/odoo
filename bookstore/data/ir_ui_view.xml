@@ -45,6 +45,39 @@
             </xpath>
         </field>
     </record>
+    <record id="product_template_tree_view_customization" model="ir.ui.view">
+        <field name="name">product.template.tree customization</field>
+        <field name="inherit_id" ref="product.product_template_tree_view"/>
+        <field name="model">product.template</field>
+        <field name="mode">extension</field>
+        <field name="active" eval="True"/>
+        <field name="priority">99</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='list_price']" position="before">
+                <field name="x_author" optional="show"/>
+                <field name="x_publisher" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+    <record id="product_template_kanban_view_customization" model="ir.ui.view">
+        <field name="name">product.template.kanban customization</field>
+        <field name="inherit_id" ref="product.product_template_kanban_view"/>
+        <field name="model">product.template</field>
+        <field name="mode">extension</field>
+        <field name="active" eval="True"/>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <xpath expr="//span[field[@name='list_price']]" position="before">
+                <span t-if="record.x_author.value">
+                    Author: <field name="x_author"/>
+                </span>
+                <span t-if="record.x_publisher.value">
+                    Publisher: <field name="x_publisher"/>
+                </span>
+            </xpath>
+        </field>
+    </record>
     <record id="purchase_order_inherit_purchase_order_tree_customization_view" model="ir.ui.view">
         <field name="name">purchase.order.inherit.purchase.order.tree customization</field>
         <field name="inherit_id" ref="purchase.purchase_order_kpis_tree"/>

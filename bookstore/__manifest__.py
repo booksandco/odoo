@@ -1,6 +1,6 @@
 {
     'name': 'Bookstore',
-    'version': '1.11',
+    'version': '1.12',
     'category': 'Retail',
     'depends': [
         'account',
@@ -87,7 +87,7 @@
         "static/src/js/my_tour.js",
     ],
     'license': 'OEEL-1',
-    'author': 'Odoo S.A.',
+    'author': 'Odoo S.A., Harry Bird',
     'images': ['images/main.png'],
     'url': "https://www.odoo.com/trial?industry&selected_app=bookstore",
     'website': "https://www.odoo.com/industries/book-store",
