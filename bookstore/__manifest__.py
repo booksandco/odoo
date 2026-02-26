@@ -1,6 +1,6 @@
 {
     'name': 'Bookstore',
-    'version': '1.9',
+    'version': '1.10',
     'category': 'Retail',
     'depends': [
         'account',
@@ -15,7 +15,6 @@
         'hr_attendance',
         'iot',
         'knowledge',
-        'l10n_nz',
         'loyalty',
         'mail',
         'mass_mailing',
