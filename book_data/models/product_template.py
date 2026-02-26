@@ -1,11 +1,17 @@
 import base64
 import logging
+import math
+import xml.etree.ElementTree as ET
+
 import requests
 
 from odoo import api, models, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
+
+TITLEPAGE_API_URL = 'https://report.titlepage.com/ReST/v1/onix-full'
+ONIX_NS = '{http://ns.editeur.org/onix/3.1/reference}'
 
 HARDCOVER_API_URL = 'https://api.hardcover.app/v1/graphql'
 
@@ -50,8 +56,8 @@ class ProductTemplate(models.Model):
     _inherit = 'product.template'
 
     @api.onchange('barcode')
-    def _onchange_barcode_fetch_hardcover(self):
-        """Automatically fetch Hardcover data when ISBN barcode is entered/updated."""
+    def _onchange_barcode_fetch_book_data(self):
+        """Automatically fetch book data from Hardcover and Titlepage when ISBN barcode is entered."""
         if not self.barcode or not self.barcode.startswith('978'):
             return
         
@@ -59,51 +65,62 @@ class ProductTemplate(models.Model):
         if self.barcode and not self.default_code:
             self.default_code = self.barcode
 
-        api_key = self.env['ir.config_parameter'].sudo().get_param('book_data.hardcover_api_key')
-        if not api_key:
+        all_vals = {}
+        sources = []
+        config = self.env['ir.config_parameter'].sudo()
+
+        # Try Hardcover
+        hardcover_key = config.get_param('book_data.hardcover_api_key')
+        if hardcover_key:
+            try:
+                edition = self._hardcover_fetch_edition(self.barcode, hardcover_key)
+                if edition:
+                    vals = self._hardcover_parse_edition(edition)
+                    if vals:
+                        all_vals.update(vals)
+                        sources.append('Hardcover')
+            except Exception as e:
+                _logger.warning("Failed to fetch Hardcover data for ISBN %s: %s", self.barcode, e)
+
+        # Try Titlepage
+        titlepage_token = config.get_param('book_data.titlepage_api_token')
+        if titlepage_token:
+            try:
+                product_xml = self._titlepage_fetch_product(self.barcode, titlepage_token)
+                if product_xml is not None:
+                    # Apply Hardcover vals first so Titlepage only fills gaps
+                    if all_vals:
+                        self.update(all_vals)
+                    vals = self._titlepage_parse_product(product_xml)
+                    if vals:
+                        all_vals.update(vals)
+                        sources.append('Titlepage')
+            except Exception as e:
+                _logger.warning("Failed to fetch Titlepage data for ISBN %s: %s", self.barcode, e)
+
+        if not hardcover_key and not titlepage_token:
             return {
                 'warning': {
-                    'title': _('Hardcover API Not Configured'),
-                    'message': _('Configure your Hardcover API key in Settings > Inventory > Barcode to auto-fetch book data.'),
+                    'title': _('Book Data APIs Not Configured'),
+                    'message': _('Configure API keys in Settings > Inventory > Barcode to auto-fetch book data.'),
                 }
             }
 
-        try:
-            edition = self._hardcover_fetch_edition(self.barcode, api_key)
-            if not edition:
-                return {
-                    'warning': {
-                        'title': _('Book Not Found'),
-                        'message': _('No book found on Hardcover for ISBN %s.') % self.barcode,
-                    }
+        if all_vals:
+            self.update(all_vals)
+            return {
+                'warning': {
+                    'title': _('Book Data Fetched'),
+                    'message': _('Populated from %s: %s') % (', '.join(sources), ', '.join(all_vals.keys())),
                 }
+            }
 
-            vals = self._hardcover_parse_edition(edition)
-            if vals:
-                self.update(vals)
-                populated_fields = ', '.join(vals.keys())
-                return {
-                    'warning': {
-                        'title': _('Book Data Fetched'),
-                        'message': _('Successfully populated: %s') % populated_fields,
-                    }
-                }
-        except UserError as e:
-            _logger.warning(f"Failed to fetch Hardcover data for ISBN {self.barcode}: {e}")
-            return {
-                'warning': {
-                    'title': _('Hardcover API Error'),
-                    'message': _('Failed to fetch data from Hardcover API. Please try again later.'),
-                }
+        return {
+            'warning': {
+                'title': _('Book Not Found'),
+                'message': _('No book data found for ISBN %s.') % self.barcode,
             }
-        except Exception as e:
-            _logger.warning(f"Unexpected error fetching Hardcover data: {e}")
-            return {
-                'warning': {
-                    'title': _('Error'),
-                    'message': _('An unexpected error occurred while fetching book data.'),
-                }
-            }
+        }
 
     @api.model
     def _hardcover_fetch_edition(self, isbn, api_key):
@@ -198,3 +215,143 @@ class ProductTemplate(models.Model):
         except requests.RequestException:
             _logger.warning("Failed to download image from %s", url)
             return None
+
+    # --- Titlepage (ONIX 3.1) ---
+
+    @api.model
+    def _titlepage_fetch_product(self, isbn, token):
+        """Fetch ONIX product XML from Titlepage API. Returns an Element or None."""
+        isbn_clean = isbn.strip()
+        url = f'{TITLEPAGE_API_URL}/{isbn_clean}'
+        headers = {'Authorization': f'Token {token}'}
+        try:
+            _logger.debug("Querying Titlepage API for ISBN: %s", isbn_clean)
+            response = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            # Response may be gzip-compressed XML; requests handles decoding
+            root = ET.fromstring(response.content)
+            product = root.find(f'{ONIX_NS}Product')
+            return product
+        except requests.RequestException as e:
+            _logger.warning("Titlepage API request failed for ISBN %s: %s", isbn_clean, e)
+            return None
+        except ET.ParseError as e:
+            _logger.warning("Failed to parse Titlepage ONIX XML for ISBN %s: %s", isbn_clean, e)
+            return None
+
+    def _titlepage_find(self, element, path):
+        """Find a child element using ONIX-namespaced path."""
+        parts = path.split('/')
+        current = element
+        for part in parts:
+            if current is None:
+                return None
+            current = current.find(f'{ONIX_NS}{part}')
+        return current
+
+    def _titlepage_findall(self, element, path):
+        """Find all matching child elements using ONIX-namespaced path."""
+        ns_path = '/'.join(f'{ONIX_NS}{p}' for p in path.split('/'))
+        return element.findall(ns_path)
+
+    def _titlepage_parse_product(self, product):
+        """Parse ONIX 3.1 Product element into product field values.
+        Only sets fields that are not already populated on self."""
+        vals = {}
+        descriptive = self._titlepage_find(product, 'DescriptiveDetail')
+        collateral = self._titlepage_find(product, 'CollateralDetail')
+        publishing = self._titlepage_find(product, 'PublishingDetail')
+
+        # Title
+        if descriptive is not None and not self.name:
+            for td in self._titlepage_findall(descriptive, 'TitleDetail'):
+                title_type = self._titlepage_find(td, 'TitleType')
+                if title_type is not None and title_type.text == '01':
+                    te = self._titlepage_find(td, 'TitleElement')
+                    if te is not None:
+                        title_text = self._titlepage_find(te, 'TitleText')
+                        subtitle = self._titlepage_find(te, 'Subtitle')
+                        if title_text is not None and title_text.text:
+                            name = title_text.text
+                            if subtitle is not None and subtitle.text:
+                                name = f"{name}: {subtitle.text}"
+                            vals['name'] = name
+                    break
+
+        # Author
+        if descriptive is not None and not self.x_author:
+            authors = []
+            for contrib in self._titlepage_findall(descriptive, 'Contributor'):
+                role = self._titlepage_find(contrib, 'ContributorRole')
+                name = self._titlepage_find(contrib, 'PersonName')
+                if role is not None and role.text == 'A01' and name is not None and name.text:
+                    authors.append(name.text)
+            if authors:
+                vals['x_author'] = ', '.join(authors)
+
+        # Publisher
+        if publishing is not None and not self.x_publisher:
+            publisher_el = self._titlepage_find(publishing, 'Publisher/PublisherName')
+            if publisher_el is not None and publisher_el.text:
+                vals['x_publisher'] = publisher_el.text
+
+        # Publication date (role 01 = publication date)
+        if publishing is not None and not self.x_publication_date:
+            for pd in self._titlepage_findall(publishing, 'PublishingDate'):
+                role = self._titlepage_find(pd, 'PublishingDateRole')
+                if role is not None and role.text == '01':
+                    date_el = self._titlepage_find(pd, 'Date')
+                    if date_el is not None and date_el.text:
+                        raw = date_el.text
+                        # Convert YYYYMMDD to YYYY-MM-DD
+                        if len(raw) == 8 and raw.isdigit():
+                            raw = f"{raw[:4]}-{raw[4:6]}-{raw[6:8]}"
+                        vals['x_publication_date'] = raw
+                    break
+
+        # Description (TextType 03 = main description)
+        if collateral is not None and not self.description_ecommerce:
+            for tc in self._titlepage_findall(collateral, 'TextContent'):
+                text_type = self._titlepage_find(tc, 'TextType')
+                if text_type is not None and text_type.text == '03':
+                    text_el = self._titlepage_find(tc, 'Text')
+                    if text_el is not None and text_el.text:
+                        vals['description_ecommerce'] = text_el.text
+                    break
+
+        # Cover image (ResourceContentType 01 = front cover)
+        if collateral is not None and not self.image_1920:
+            for sr in self._titlepage_findall(collateral, 'SupportingResource'):
+                rct = self._titlepage_find(sr, 'ResourceContentType')
+                if rct is not None and rct.text == '01':
+                    rv = self._titlepage_find(sr, 'ResourceVersion')
+                    if rv is not None:
+                        link = self._titlepage_find(rv, 'ResourceLink')
+                        if link is not None and link.text:
+                            image_data = self._hardcover_download_image(link.text)
+                            if image_data:
+                                vals['image_1920'] = image_data
+                    break
+
+        # List price (NZ RRP - PriceType 02, rounded up from .99 to .00)
+        for ps in self._titlepage_findall(product, 'ProductSupply'):
+            market_territory = self._titlepage_find(ps, 'Market/Territory/CountriesIncluded')
+            if market_territory is not None and 'NZ' in market_territory.text:
+                supply = self._titlepage_find(ps, 'SupplyDetail')
+                if supply is not None:
+                    for price_el in self._titlepage_findall(supply, 'Price'):
+                        price_type = self._titlepage_find(price_el, 'PriceType')
+                        if price_type is not None and price_type.text == '02':
+                            amount = self._titlepage_find(price_el, 'PriceAmount')
+                            if amount is not None and amount.text:
+                                try:
+                                    price = float(amount.text)
+                                    vals['list_price'] = math.ceil(price)
+                                except ValueError:
+                                    pass
+                            break
+                break
+
+        return vals

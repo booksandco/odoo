@@ -8,3 +8,7 @@ class ResConfigSettings(models.TransientModel):
         string="Hardcover API Key",
         config_parameter='book_data.hardcover_api_key',
     )
+    titlepage_api_token = fields.Char(
+        string="Titlepage API Token",
+        config_parameter='book_data.titlepage_api_token',
+    )
