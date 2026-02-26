@@ -14,13 +14,7 @@ for template in self:
     template['x_last_sale_date'] = date_map.get(template.product_variant_id.id, False)
 ]]></field>
     </record>
-    <record id="x_last_sale_stock_field" model="ir.model.fields">
-        <field name="name">x_last_sale_stock</field>
-        <field name="field_description">Last Sale</field>
-        <field name="ttype">date</field>
-        <field name="related">product_tmpl_id.x_last_sale_date</field>
-        <field name="model_id" ref="stock.model_stock_warehouse_orderpoint"/>
-    </record>
+
     <record id="x_last_vendor_template_field" model="ir.model.fields">
         <field name="name">x_last_vendor</field>
         <field name="field_description">Last Vendor</field>
@@ -36,10 +30,15 @@ for template in self:
         <field name="related">product_id.barcode</field>
         <field name="model_id" ref="purchase.model_purchase_order_line"/>
     </record>
-
     <record id="x_author_template_field" model="ir.model.fields">
         <field name="name">x_author</field>
         <field name="field_description">Author</field>
+        <field name="ttype">char</field>
+        <field name="model_id" ref="product.model_product_template"/>
+    </record>
+    <record id="x_publisher_template_field" model="ir.model.fields">
+        <field name="name">x_publisher</field>
+        <field name="field_description">Publisher</field>
         <field name="ttype">char</field>
         <field name="model_id" ref="product.model_product_template"/>
     </record>
@@ -47,12 +46,6 @@ for template in self:
         <field name="name">x_publication_date</field>
         <field name="field_description">Publication Date</field>
         <field name="ttype">date</field>
-        <field name="model_id" ref="product.model_product_template"/>
-    </record>
-    <record id="x_publisher_template_field" model="ir.model.fields">
-        <field name="name">x_publisher</field>
-        <field name="field_description">Publisher</field>
-        <field name="ttype">char</field>
         <field name="model_id" ref="product.model_product_template"/>
     </record>
 </odoo>

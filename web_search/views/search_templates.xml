@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Override the search result item template to include author and publisher as separate lines -->
+        <template id="search_result_item" inherit_id="website.one_hybrid" name="Search Result with Author and Publisher">
+            <xpath expr="//div[hasclass('o_search_result_item_detail', 'px-3')]" position="inside">
+                <small t-if="result.get('x_author')" class="text-muted d-block">
+                    <t t-out="result.get('x_author')"/>
+                </small>
+                <small t-if="result.get('x_publisher')" class="text-muted d-block">
+                    <t t-out="result.get('x_publisher')"/>
+                </small>
+            </xpath>
+        </template>
+
+        <!-- Override the product tile template to show author and publisher next to description -->
+        <template id="product_tile_author_publisher" inherit_id="website_sale.products_item" name="Product Tile with Author and Publisher">
+            <xpath expr="//div[hasclass('oe_subdescription_wrapper')]/div[hasclass('oe_subdescription', 'text-muted', 'small')]/div" position="after">
+                <div t-if="product.x_author or product.x_publisher" class="o_wsale_product_author_publisher small text-muted mt-1">
+                    <div t-if="product.x_author" t-out="product.x_author"/>
+                    <div t-if="product.x_publisher" t-out="product.x_publisher"/>
+                </div>
+            </xpath>
+        </template>
+
+        <!-- Override the searchbar input to include author and publisher display toggles -->
+        <template id="searchbar_with_author_publisher" inherit_id="website.website_search_box_input" name="Searchbar with Author and Publisher">
+            <xpath expr="//input[@name='search']" position="attributes">
+                <attribute name="t-att-data-display-author">display_author or 'true'</attribute>
+                <attribute name="t-att-data-display-publisher">display_publisher or 'true'</attribute>
+            </xpath>
+        </template>
+    </data>
+</odoo>
