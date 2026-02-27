@@ -6,8 +6,8 @@
         'bookstore',
         'website_sale',
     ],
-    'license': 'OEEL-1',
-    'author': 'Odoo S.A.',
+    'license': 'LGPL-3',
+    'author': 'Harry Bird',
     'data': [
         'views/search_templates.xml',
     ],
