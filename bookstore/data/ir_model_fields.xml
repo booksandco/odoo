@@ -30,6 +30,17 @@ for template in self:
         <field name="related">product_id.barcode</field>
         <field name="model_id" ref="purchase.model_purchase_order_line"/>
     </record>
+    <record id="x_is_isbn_template_field" model="ir.model.fields">
+        <field name="name">x_is_isbn</field>
+        <field name="field_description">Is ISBN</field>
+        <field name="ttype">boolean</field>
+        <field name="model_id" ref="product.model_product_template"/>
+        <field name="depends">barcode</field>
+        <field name="compute"><![CDATA[
+for rec in self:
+    rec['x_is_isbn'] = bool(rec.barcode and rec.barcode.startswith(('978', '979')))
+]]></field>
+    </record>
     <record id="x_author_template_field" model="ir.model.fields">
         <field name="name">x_author</field>
         <field name="field_description">Author</field>

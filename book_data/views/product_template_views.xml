@@ -7,7 +7,6 @@
         <field name="arch" type="xml">
             <xpath expr="//form/sheet" position="before">
                 <header>
-                    <field name="x_is_isbn" invisible="1"/>
                     <button name="action_refresh_book_data"
                             type="object"
                             string="Refresh Book Data"
