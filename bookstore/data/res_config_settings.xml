@@ -1,12 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <odoo noupdate="1">
-    <function model="res.lang" name="_activate_lang" eval="[[], 'en_NZ']"/>
-    <record id="base.user_admin" model="res.users">
-        <field name="lang">en_NZ</field>
-    </record>
-    <record id="base.partner_root" model="res.partner">
-        <field name="lang">en_NZ</field>
-    </record>
     <record id="res_config_setting_enable" model="res.config.settings">
         <field name="group_product_pricelist" eval="1"/>
         <field name="group_stock_adv_location" eval="1"/>
