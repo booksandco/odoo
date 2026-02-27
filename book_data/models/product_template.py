@@ -108,19 +108,6 @@ class ProductTemplate(models.Model):
 
         if all_vals:
             self.update(all_vals)
-            return {
-                'warning': {
-                    'title': _('Book Data Fetched'),
-                    'message': _('Populated from %s: %s') % (', '.join(sources), ', '.join(all_vals.keys())),
-                }
-            }
-
-        return {
-            'warning': {
-                'title': _('Book Not Found'),
-                'message': _('No book data found for ISBN %s.') % self.barcode,
-            }
-        }
 
     def action_refresh_book_data(self):
         """Button action to refresh book data from external APIs, overwriting existing values."""
@@ -176,6 +163,15 @@ class ProductTemplate(models.Model):
             }
 
         raise UserError(_('No book data found for ISBN %s.') % self.barcode)
+
+    def action_view_on_hardcover(self):
+        """Open Hardcover search page for this product's ISBN in a new tab."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'https://hardcover.app/search?q={self.barcode}',
+            'target': 'new',
+        }
 
     @api.model
     def _hardcover_fetch_edition(self, isbn, api_key):
