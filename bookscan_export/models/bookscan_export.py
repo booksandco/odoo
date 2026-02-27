@@ -39,7 +39,7 @@ class BookscanExportLog(models.Model):
         self.env.cr.execute("""
             SELECT
                 pc.name                             AS outlet,
-                pt.barcode                          AS isbn,
+                pp.barcode                          AS isbn,
                 pol.qty                             AS qty,
                 pol.price_unit                      AS price,
                 po.date_order                       AS sale_date,
@@ -49,14 +49,13 @@ class BookscanExportLog(models.Model):
             JOIN pos_order      po  ON po.id = pol.order_id
             JOIN pos_config     pc  ON pc.id = po.config_id
             JOIN product_product pp ON pp.id = pol.product_id
-            JOIN product_template pt ON pt.id = pp.product_tmpl_id
             LEFT JOIN res_partner rp ON rp.id = po.partner_id
             LEFT JOIN res_country rc ON rc.id = rp.country_id
             WHERE po.state IN ('paid', 'done')
               AND po.date_order::date >= %s
               AND po.date_order::date <= %s
-              AND pt.barcode IS NOT NULL
-              AND pt.barcode ~ '^97[89]'
+              AND pp.barcode IS NOT NULL
+              AND pp.barcode ~ '^97[89]'
             ORDER BY po.date_order
         """, (date_from, date_to))
         return self.env.cr.dictfetchall()
@@ -67,7 +66,7 @@ class BookscanExportLog(models.Model):
         self.env.cr.execute("""
             SELECT
                 'onlinestore'                       AS outlet,
-                pt.barcode                          AS isbn,
+                pp.barcode                          AS isbn,
                 sol.product_uom_qty                 AS qty,
                 sol.price_unit                      AS price,
                 so.date_order                       AS sale_date,
@@ -76,15 +75,14 @@ class BookscanExportLog(models.Model):
             FROM sale_order_line    sol
             JOIN sale_order         so  ON so.id = sol.order_id
             JOIN product_product   pp  ON pp.id = sol.product_id
-            JOIN product_template  pt  ON pt.id = pp.product_tmpl_id
             LEFT JOIN res_partner  rp  ON rp.id = so.partner_shipping_id
             LEFT JOIN res_country  rc  ON rc.id = rp.country_id
             WHERE so.state IN ('sale', 'done')
               AND so.website_id IS NOT NULL
               AND so.date_order::date >= %s
               AND so.date_order::date <= %s
-              AND pt.barcode IS NOT NULL
-              AND pt.barcode ~ '^97[89]'
+              AND pp.barcode IS NOT NULL
+              AND pp.barcode ~ '^97[89]'
             ORDER BY so.date_order
         """, (date_from, date_to))
         return self.env.cr.dictfetchall()
