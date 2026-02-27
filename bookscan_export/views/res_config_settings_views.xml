@@ -31,9 +31,11 @@
                 <setting id="bookscan_outlet" string="Outlet Name" help="Identifier used in the CSV filename.">
                     <field name="bookscan_outlet_name" placeholder="booksandco"/>
                 </setting>
-                <setting id="bookscan_manual" string="Manual Export" help="Run a BookScan export now for testing.">
-                    <button name="action_bookscan_export_now" type="object"
-                            string="Export Now" class="btn-primary" icon="fa-upload"/>
+                <setting id="bookscan_manual" string="Manual Export" help="Download a test CSV or upload directly to BookScan.">
+                    <button name="action_bookscan_download_csv" type="object"
+                            string="Download CSV" class="btn-secondary" icon="fa-download"/>
+                    <button name="action_bookscan_upload_now" type="object"
+                            string="Upload to BookScan" class="btn-primary ms-2" icon="fa-upload"/>
                 </setting>
             </xpath>
         </field>
