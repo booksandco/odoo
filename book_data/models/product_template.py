@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 
 import requests
 
-from odoo import api, models, _
+from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
@@ -55,10 +55,17 @@ query GetBookByISBN($isbn: String!) {
 class ProductTemplate(models.Model):
     _inherit = 'product.template'
 
+    x_is_isbn = fields.Boolean(compute='_compute_is_isbn')
+
+    @api.depends('barcode')
+    def _compute_is_isbn(self):
+        for rec in self:
+            rec.x_is_isbn = bool(rec.barcode and rec.barcode.startswith(('978', '979')))
+
     @api.onchange('barcode')
     def _onchange_barcode_fetch_book_data(self):
         """Automatically fetch book data from Hardcover and Titlepage when ISBN barcode is entered."""
-        if not self.barcode or not self.barcode.startswith('978'):
+        if not self.barcode or not self.barcode.startswith(('978', '979')):
             return
         
         # Copy barcode to internal reference field
@@ -112,8 +119,8 @@ class ProductTemplate(models.Model):
     def action_refresh_book_data(self):
         """Button action to refresh book data from external APIs, overwriting existing values."""
         self.ensure_one()
-        if not self.barcode or not self.barcode.startswith('978'):
-            raise UserError(_('A valid ISBN barcode (starting with 978) is required to fetch book data.'))
+        if not self.barcode or not self.barcode.startswith(('978', '979')):
+            raise UserError(_('A valid ISBN barcode (starting with 978 or 979) is required to fetch book data.'))
 
         hardcover_vals = {}
         titlepage_vals = {}
