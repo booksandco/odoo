@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_bookscan" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.bookscan_export</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@id='connectors_setting_container']" position="inside">
+                <setting id="bookscan_sftp" string="BookScan SFTP" help="Configure SFTP connection to Nielsen BookScan.">
+                    <div class="row mt8">
+                        <label for="bookscan_sftp_host" string="Host" class="col-3 col-lg-3"/>
+                        <field name="bookscan_sftp_host" placeholder="sftp.nielseniq.com" class="col-9 col-lg-4"/>
+                    </div>
+                    <div class="row mt8">
+                        <label for="bookscan_sftp_port" string="Port" class="col-3 col-lg-3"/>
+                        <field name="bookscan_sftp_port" class="col-9 col-lg-4"/>
+                    </div>
+                    <div class="row mt8">
+                        <label for="bookscan_sftp_username" string="Username" class="col-3 col-lg-3"/>
+                        <field name="bookscan_sftp_username" class="col-9 col-lg-4"/>
+                    </div>
+                    <div class="row mt8">
+                        <label for="bookscan_sftp_password" string="Password" class="col-3 col-lg-3"/>
+                        <field name="bookscan_sftp_password" password="True" class="col-9 col-lg-4"/>
+                    </div>
+                    <div class="row mt8">
+                        <label for="bookscan_sftp_key_path" string="Private Key Path" class="col-3 col-lg-3"/>
+                        <field name="bookscan_sftp_key_path" placeholder="/home/odoo/.ssh/id_rsa" class="col-9 col-lg-4"/>
+                    </div>
+                </setting>
+                <setting id="bookscan_outlet" string="Outlet Name" help="Identifier used in the CSV filename.">
+                    <field name="bookscan_outlet_name" placeholder="booksandco"/>
+                </setting>
+                <setting id="bookscan_manual" string="Manual Export" help="Run a BookScan export now for testing.">
+                    <button name="action_bookscan_export_now" type="object"
+                            string="Export Now" class="btn-primary" icon="fa-upload"/>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+</odoo>

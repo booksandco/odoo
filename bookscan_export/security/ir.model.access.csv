@@ -1,0 +1,2 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_bookscan_export_log,bookscan_export.log,model_bookscan_export_log,point_of_sale.group_pos_manager,1,1,1,0
