@@ -7,6 +7,7 @@
         <field name="arch" type="xml">
             <xpath expr="//form/sheet" position="before">
                 <header>
+                    <field name="x_is_isbn" invisible="1"/>
                     <button name="action_refresh_book_data"
                             type="object"
                             string="Refresh Book Data"
@@ -18,6 +19,15 @@
                             class="btn-secondary"
                             invisible="not x_is_isbn"/>
                 </header>
+            </xpath>
+            <xpath expr="//field[@name='x_author']" position="attributes">
+                <attribute name="invisible">not x_is_isbn</attribute>
+            </xpath>
+            <xpath expr="//field[@name='x_publisher']" position="attributes">
+                <attribute name="invisible">not x_is_isbn</attribute>
+            </xpath>
+            <xpath expr="//field[@name='x_publication_date']" position="attributes">
+                <attribute name="invisible">not x_is_isbn</attribute>
             </xpath>
         </field>
     </record>
