@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 
 import requests
 
-from odoo import api, models, _
+from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
@@ -54,6 +54,13 @@ query GetBookByISBN($isbn: String!) {
 
 class ProductTemplate(models.Model):
     _inherit = 'product.template'
+
+    x_is_isbn = fields.Boolean(compute='_compute_is_isbn')
+
+    @api.depends('barcode')
+    def _compute_is_isbn(self):
+        for rec in self:
+            rec.x_is_isbn = bool(rec.barcode and rec.barcode.startswith(('978', '979')))
 
     @api.onchange('barcode')
     def _onchange_barcode_fetch_book_data(self):
