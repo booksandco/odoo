@@ -25,8 +25,7 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='active']" position="after">
                 <field name="x_is_isbn" invisible="1"/>
-                <field name="barcode" string="ISBN" invisible="not x_is_isbn"/>
-                <field name="barcode" string="Barcode" invisible="x_is_isbn"/>
+                <xpath expr="//field[@name='barcode']" position="move"/>
                 <field name="x_author" invisible="not x_is_isbn"/>
                 <field name="x_publisher" invisible="not x_is_isbn"/>
                 <field name="x_publication_date" invisible="not x_is_isbn"/>
@@ -43,7 +42,7 @@
                 <field name="x_last_vendor" force_save="1" readonly="True"/>
             </xpath>
             <xpath expr="//field[@name='barcode']" position="attributes">
-                <attribute name="invisible">True</attribute>
+                <attribute name="string">ISBN</attribute>
             </xpath>
         </field>
     </record>
