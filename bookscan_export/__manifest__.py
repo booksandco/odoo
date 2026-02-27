@@ -1,10 +1,10 @@
 {
     'name': 'BookScan Export',
-    'version': '1.0',
+    'version': '0.1',
     'category': 'Retail',
-    'summary': 'Daily POS sales export to Nielsen BookScan via SFTP',
+    'summary': 'Weekly POS sales export to Nielsen BookScan via SFTP',
     'description': """
-Generates a daily CSV of book sales from POS orders and uploads it to
+Generates a weekly CSV of book sales from POS orders and uploads it to
 Nielsen BookScan's SFTP server.  Includes website sales with post code
 and country code when available.
     """,
