@@ -24,10 +24,11 @@
         <field name="type">form</field>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='active']" position="after">
+                <field name="x_is_isbn" invisible="1"/>
                 <xpath expr="//field[@name='barcode']" position="move"/>
-                <field name="x_author"/>
-                <field name="x_publisher"/>
-                <field name="x_publication_date"/>
+                <field name="x_author" invisible="not x_is_isbn"/>
+                <field name="x_publisher" invisible="not x_is_isbn"/>
+                <field name="x_publication_date" invisible="not x_is_isbn"/>
                 <xpath expr="//field[@name='categ_id']" position="move"/>
             </xpath>
             <xpath expr="//field[@name='default_code']" position="after">
