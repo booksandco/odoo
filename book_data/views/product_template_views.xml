@@ -12,6 +12,11 @@
                             string="Refresh Book Data"
                             class="oe_highlight"
                             invisible="not barcode"/>
+                    <button name="action_view_on_hardcover"
+                            type="object"
+                            string="View on Hardcover"
+                            class="btn-secondary"
+                            invisible="not barcode"/>
                 </header>
             </xpath>
         </field>
