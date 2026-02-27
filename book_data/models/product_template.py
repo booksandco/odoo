@@ -122,6 +122,61 @@ class ProductTemplate(models.Model):
             }
         }
 
+    def action_refresh_book_data(self):
+        """Button action to refresh book data from external APIs, overwriting existing values."""
+        self.ensure_one()
+        if not self.barcode or not self.barcode.startswith('978'):
+            raise UserError(_('A valid ISBN barcode (starting with 978) is required to fetch book data.'))
+
+        hardcover_vals = {}
+        titlepage_vals = {}
+        sources = []
+        config = self.env['ir.config_parameter'].sudo()
+
+        hardcover_key = config.get_param('book_data.hardcover_api_key')
+        if hardcover_key:
+            try:
+                edition = self._hardcover_fetch_edition(self.barcode, hardcover_key)
+                if edition:
+                    hardcover_vals = self._hardcover_parse_edition(edition, force=True)
+                    if hardcover_vals:
+                        sources.append('Hardcover')
+            except Exception as e:
+                _logger.warning("Failed to fetch Hardcover data for ISBN %s: %s", self.barcode, e)
+
+        titlepage_token = config.get_param('book_data.titlepage_api_token')
+        if titlepage_token:
+            try:
+                product_xml = self._titlepage_fetch_product(self.barcode, titlepage_token)
+                if product_xml is not None:
+                    titlepage_vals = self._titlepage_parse_product(product_xml, force=True)
+                    if titlepage_vals:
+                        sources.append('Titlepage')
+            except Exception as e:
+                _logger.warning("Failed to fetch Titlepage data for ISBN %s: %s", self.barcode, e)
+
+        if not hardcover_key and not titlepage_token:
+            raise UserError(_('Configure API keys in Settings > Inventory > Barcode to auto-fetch book data.'))
+
+        # Titlepage as base, Hardcover overwrites (Hardcover takes priority)
+        all_vals = {**titlepage_vals, **hardcover_vals}
+        if all_vals:
+            self.write(all_vals)
+
+        if sources:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Book Data Refreshed'),
+                    'message': _('Updated from %s: %s') % (', '.join(sources), ', '.join(all_vals.keys())),
+                    'type': 'success',
+                    'sticky': False,
+                },
+            }
+
+        raise UserError(_('No book data found for ISBN %s.') % self.barcode)
+
     @api.model
     def _hardcover_fetch_edition(self, isbn, api_key):
         """Fetch edition data from Hardcover GraphQL API."""
@@ -158,7 +213,7 @@ class ProductTemplate(models.Model):
             _logger.exception("Hardcover API request failed for ISBN %s: %s", isbn_clean, str(e))
             raise UserError(_("Failed to connect to Hardcover API. Please try again later."))
 
-    def _hardcover_parse_edition(self, edition):
+    def _hardcover_parse_edition(self, edition, force=False):
         """Parse Hardcover edition response into product field values."""
         vals = {}
         book = edition.get('book') or {}
@@ -168,37 +223,37 @@ class ProductTemplate(models.Model):
         subtitle = edition.get('subtitle')
         if subtitle and title:
             title = f"{title}: {subtitle}"
-        if title and not self.name:
+        if title and (force or not self.name):
             vals['name'] = title
 
         # Description (HTML field - wrap plain text in <p> tag)
         description = book.get('description')
-        if description and not self.description_ecommerce:
+        if description and (force or not self.description_ecommerce):
             vals['description_ecommerce'] = f'<p>{description}</p>'
 
         # Author - contributions are in the book
         contributions = book.get('contributions') or []
         authors = [c['author']['name'] for c in contributions if c.get('author', {}).get('name')]
-        if authors and not self.x_author:
+        if authors and (force or not self.x_author):
             vals['x_author'] = ', '.join(authors)
 
         # Publisher - now at edition level
         publisher = edition.get('publisher')
         if publisher and isinstance(publisher, dict):
             publisher_name = publisher.get('name')
-            if publisher_name and not self.x_publisher:
+            if publisher_name and (force or not self.x_publisher):
                 vals['x_publisher'] = publisher_name
 
         # Publication date
         release_date = edition.get('release_date')
-        if release_date and not self.x_publication_date:
+        if release_date and (force or not self.x_publication_date):
             vals['x_publication_date'] = release_date
 
         # Image
         cached_image = edition.get('cached_image')
         if cached_image and isinstance(cached_image, dict):
             image_url = cached_image.get('url')
-            if image_url and not self.image_1920:
+            if image_url and (force or not self.image_1920):
                 image_data = self._hardcover_download_image(image_url)
                 if image_data:
                     vals['image_1920'] = image_data
@@ -256,16 +311,16 @@ class ProductTemplate(models.Model):
         ns_path = '/'.join(f'{ONIX_NS}{p}' for p in path.split('/'))
         return element.findall(ns_path)
 
-    def _titlepage_parse_product(self, product):
+    def _titlepage_parse_product(self, product, force=False):
         """Parse ONIX 3.1 Product element into product field values.
-        Only sets fields that are not already populated on self."""
+        Only sets fields that are not already populated on self (unless force=True)."""
         vals = {}
         descriptive = self._titlepage_find(product, 'DescriptiveDetail')
         collateral = self._titlepage_find(product, 'CollateralDetail')
         publishing = self._titlepage_find(product, 'PublishingDetail')
 
         # Title
-        if descriptive is not None and not self.name:
+        if descriptive is not None and (force or not self.name):
             for td in self._titlepage_findall(descriptive, 'TitleDetail'):
                 title_type = self._titlepage_find(td, 'TitleType')
                 if title_type is not None and title_type.text == '01':
@@ -281,7 +336,7 @@ class ProductTemplate(models.Model):
                     break
 
         # Author
-        if descriptive is not None and not self.x_author:
+        if descriptive is not None and (force or not self.x_author):
             authors = []
             for contrib in self._titlepage_findall(descriptive, 'Contributor'):
                 role = self._titlepage_find(contrib, 'ContributorRole')
@@ -292,13 +347,13 @@ class ProductTemplate(models.Model):
                 vals['x_author'] = ', '.join(authors)
 
         # Publisher
-        if publishing is not None and not self.x_publisher:
+        if publishing is not None and (force or not self.x_publisher):
             publisher_el = self._titlepage_find(publishing, 'Publisher/PublisherName')
             if publisher_el is not None and publisher_el.text:
                 vals['x_publisher'] = publisher_el.text
 
         # Publication date (role 01 = publication date)
-        if publishing is not None and not self.x_publication_date:
+        if publishing is not None and (force or not self.x_publication_date):
             for pd in self._titlepage_findall(publishing, 'PublishingDate'):
                 role = self._titlepage_find(pd, 'PublishingDateRole')
                 if role is not None and role.text == '01':
@@ -312,7 +367,7 @@ class ProductTemplate(models.Model):
                     break
 
         # Description (TextType 03 = main description)
-        if collateral is not None and not self.description_ecommerce:
+        if collateral is not None and (force or not self.description_ecommerce):
             for tc in self._titlepage_findall(collateral, 'TextContent'):
                 text_type = self._titlepage_find(tc, 'TextType')
                 if text_type is not None and text_type.text == '03':
@@ -322,7 +377,7 @@ class ProductTemplate(models.Model):
                     break
 
         # Cover image (ResourceContentType 01 = front cover)
-        if collateral is not None and not self.image_1920:
+        if collateral is not None and (force or not self.image_1920):
             for sr in self._titlepage_findall(collateral, 'SupportingResource'):
                 rct = self._titlepage_find(sr, 'ResourceContentType')
                 if rct is not None and rct.text == '01':
@@ -336,7 +391,7 @@ class ProductTemplate(models.Model):
                     break
 
         # Weight (MeasureType 08 = weight)
-        if descriptive is not None and not self.weight:
+        if descriptive is not None and (force or not self.weight):
             for measure in self._titlepage_findall(descriptive, 'Measure'):
                 mtype = self._titlepage_find(measure, 'MeasureType')
                 if mtype is not None and mtype.text == '08':
