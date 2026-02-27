@@ -158,10 +158,10 @@ class BookscanExportLog(models.Model):
 
     @api.model
     def _cron_export(self):
-        """Scheduled action: export yesterday's sales to BookScan."""
+        """Scheduled action: export last 7 days of sales to BookScan."""
         today = fields.Date.context_today(self)
         date_to = today - timedelta(days=1)
-        date_from = date_to  # single day
+        date_from = today - timedelta(days=7)
 
         self._run_export(date_from, date_to)
 
