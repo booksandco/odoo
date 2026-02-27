@@ -30,19 +30,23 @@ class BookscanExportLog(models.Model):
 
     # ---- CSV generation ----
 
+    def _get_tz(self):
+        return self.env.context.get('tz') or self.env.user.tz or 'Pacific/Auckland'
+
     @api.model
     def _get_pos_sales(self, date_from, date_to):
         """Query POS order lines for book sales in the date range.
 
         Returns a list of dicts ready for CSV rows.
         """
+        tz = self._get_tz()
         self.env.cr.execute("""
             SELECT
                 pc.name                             AS outlet,
                 pp.barcode                          AS isbn,
                 pol.qty                             AS qty,
                 pol.price_unit                      AS price,
-                po.date_order                       AS sale_date,
+                po.date_order AT TIME ZONE %s       AS sale_date,
                 rp.zip                              AS postcode,
                 rc.code                             AS country_code
             FROM pos_order_line pol
@@ -52,24 +56,25 @@ class BookscanExportLog(models.Model):
             LEFT JOIN res_partner rp ON rp.id = po.partner_id
             LEFT JOIN res_country rc ON rc.id = rp.country_id
             WHERE po.state IN ('paid', 'done')
-              AND po.date_order::date >= %s
-              AND po.date_order::date <= %s
+              AND (po.date_order AT TIME ZONE %s)::date >= %s
+              AND (po.date_order AT TIME ZONE %s)::date <= %s
               AND pp.barcode IS NOT NULL
               AND pp.barcode ~ '^97[89]'
             ORDER BY po.date_order
-        """, (date_from, date_to))
+        """, (tz, tz, date_from, tz, date_to))
         return self.env.cr.dictfetchall()
 
     @api.model
     def _get_website_sales(self, date_from, date_to):
         """Query confirmed website sale order lines for books in the date range."""
+        tz = self._get_tz()
         self.env.cr.execute("""
             SELECT
                 'onlinestore'                       AS outlet,
                 pp.barcode                          AS isbn,
                 sol.product_uom_qty                 AS qty,
                 sol.price_unit                      AS price,
-                so.date_order                       AS sale_date,
+                so.date_order AT TIME ZONE %s       AS sale_date,
                 rp.zip                              AS postcode,
                 rc.code                             AS country_code
             FROM sale_order_line    sol
@@ -79,12 +84,12 @@ class BookscanExportLog(models.Model):
             LEFT JOIN res_country  rc  ON rc.id = rp.country_id
             WHERE so.state IN ('sale', 'done')
               AND so.website_id IS NOT NULL
-              AND so.date_order::date >= %s
-              AND so.date_order::date <= %s
+              AND (so.date_order AT TIME ZONE %s)::date >= %s
+              AND (so.date_order AT TIME ZONE %s)::date <= %s
               AND pp.barcode IS NOT NULL
               AND pp.barcode ~ '^97[89]'
             ORDER BY so.date_order
-        """, (date_from, date_to))
+        """, (tz, tz, date_from, tz, date_to))
         return self.env.cr.dictfetchall()
 
     @api.model
