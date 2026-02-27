@@ -22,4 +22,15 @@
             </xpath>
         </field>
     </record>
+    <record id="product_template_form_view_book_data_barcode" model="ir.ui.view">
+        <field name="name">product.template.form.book_data.barcode</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="bookstore.product_template_product_form_customization_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='barcode']" position="replace">
+                <field name="barcode" string="ISBN" invisible="not x_is_isbn"/>
+                <field name="barcode" string="Barcode" invisible="x_is_isbn"/>
+            </xpath>
+        </field>
+    </record>
 </odoo>
