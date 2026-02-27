@@ -24,10 +24,12 @@
         <field name="type">form</field>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='active']" position="after">
-                <xpath expr="//field[@name='barcode']" position="move"/>
-                <field name="x_author"/>
-                <field name="x_publisher"/>
-                <field name="x_publication_date"/>
+                <field name="x_is_isbn" invisible="1"/>
+                <field name="barcode" string="ISBN" invisible="not x_is_isbn"/>
+                <field name="barcode" string="Barcode" invisible="x_is_isbn"/>
+                <field name="x_author" invisible="not x_is_isbn"/>
+                <field name="x_publisher" invisible="not x_is_isbn"/>
+                <field name="x_publication_date" invisible="not x_is_isbn"/>
                 <xpath expr="//field[@name='categ_id']" position="move"/>
             </xpath>
             <xpath expr="//field[@name='default_code']" position="after">
@@ -41,7 +43,7 @@
                 <field name="x_last_vendor" force_save="1" readonly="True"/>
             </xpath>
             <xpath expr="//field[@name='barcode']" position="attributes">
-                <attribute name="string">ISBN</attribute>
+                <attribute name="invisible">True</attribute>
             </xpath>
         </field>
     </record>
