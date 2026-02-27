@@ -1,6 +1,6 @@
 {
     'name': 'BookScan Export',
-    'version': '0.2.1',
+    'version': '0.2.2',
     'category': 'Retail',
     'summary': 'Weekly POS sales export to Nielsen BookScan via SFTP',
     'description': """
