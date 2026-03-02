@@ -80,7 +80,7 @@ class CustomerOrder(models.Model):
                 FROM sale_order_line sol
                 JOIN sale_order so ON so.id = sol.order_id
                 JOIN product_product pp ON pp.id = sol.product_id
-                JOIN product_template pt ON pt.id = pp.product_tmpl_id AND pt.type = 'product'
+                JOIN product_template pt ON pt.id = pp.product_tmpl_id AND pt.is_storable = true
                 LEFT JOIN (
                     SELECT product_id, SUM(quantity - reserved_quantity) AS free_qty
                     FROM stock_quant
