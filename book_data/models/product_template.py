@@ -11,7 +11,8 @@ from odoo.exceptions import UserError
 _logger = logging.getLogger(__name__)
 
 TITLEPAGE_API_URL = 'https://report.titlepage.com/ReST/v1/onix-full'
-ONIX_NS = '{http://ns.editeur.org/onix/3.1/reference}'
+ONIX_NS_31 = '{http://ns.editeur.org/onix/3.1/reference}'
+ONIX_NS_30 = '{http://ns.editeur.org/onix/3.0/reference}'
 
 HARDCOVER_API_URL = 'https://api.hardcover.app/v1/graphql'
 
@@ -283,7 +284,12 @@ class ProductTemplate(models.Model):
             response.raise_for_status()
             # Response may be gzip-compressed XML; requests handles decoding
             root = ET.fromstring(response.content)
-            product = root.find(f'{ONIX_NS}Product')
+            # Detect ONIX namespace from the response (API may return 3.0 or 3.1)
+            self._onix_ns = ONIX_NS_31
+            product = root.find(f'{ONIX_NS_31}Product')
+            if product is None:
+                self._onix_ns = ONIX_NS_30
+                product = root.find(f'{ONIX_NS_30}Product')
             return product
         except requests.RequestException as e:
             _logger.warning("Titlepage API request failed for ISBN %s: %s", isbn_clean, e)
@@ -294,17 +300,19 @@ class ProductTemplate(models.Model):
 
     def _titlepage_find(self, element, path):
         """Find a child element using ONIX-namespaced path."""
+        ns = getattr(self, '_onix_ns', ONIX_NS_31)
         parts = path.split('/')
         current = element
         for part in parts:
             if current is None:
                 return None
-            current = current.find(f'{ONIX_NS}{part}')
+            current = current.find(f'{ns}{part}')
         return current
 
     def _titlepage_findall(self, element, path):
         """Find all matching child elements using ONIX-namespaced path."""
-        ns_path = '/'.join(f'{ONIX_NS}{p}' for p in path.split('/'))
+        ns = getattr(self, '_onix_ns', ONIX_NS_31)
+        ns_path = '/'.join(f'{ns}{p}' for p in path.split('/'))
         return element.findall(ns_path)
 
     def _titlepage_parse_product(self, product, force=False):
