@@ -5,7 +5,7 @@
     'summary': 'Weekly POS sales export to Nielsen BookScan via SFTP',
     'description': """
 Generates a weekly CSV of book sales from POS orders and uploads it to
-Nielsen BookScan's SFTP server.  Includes website sales with post code
+Nielsen BookScan's SFTP server. Includes website sales with post code
 and country code when available.
     """,
     'depends': [
