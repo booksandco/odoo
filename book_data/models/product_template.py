@@ -428,10 +428,12 @@ class ProductTemplate(models.Model):
             if market_territory is not None and market_territory.text and 'NZ' in market_territory.text:
                 supply = _find(ps, 'SupplyDetail')
                 if supply is not None:
-                    # List price
+                    # List price (NZD only, PriceType 02 = RRP inc tax)
                     for price_el in _findall(supply, 'Price'):
                         price_type = _find(price_el, 'PriceType')
-                        if price_type is not None and price_type.text == '02':
+                        currency = _find(price_el, 'CurrencyCode')
+                        if (price_type is not None and price_type.text == '02'
+                                and currency is not None and currency.text == 'NZD'):
                             amount = _find(price_el, 'PriceAmount')
                             if amount is not None and amount.text:
                                 try:
