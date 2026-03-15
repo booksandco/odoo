@@ -1,6 +1,6 @@
 {
     'name': 'Book Data',
-    'version': '1.9.7',
+    'version': '1.9.8',
     'category': 'Retail',
     'summary': 'Fetch book metadata from external APIs (Hardcover, Titlepage)',
     'description': """
