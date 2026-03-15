@@ -11,8 +11,7 @@ from odoo.exceptions import UserError
 _logger = logging.getLogger(__name__)
 
 TITLEPAGE_API_URL = 'https://report.titlepage.com/ReST/v1/onix-full'
-ONIX_NS_31 = '{http://ns.editeur.org/onix/3.1/reference}'
-ONIX_NS_30 = '{http://ns.editeur.org/onix/3.0/reference}'
+ONIX_NS = '{http://ns.editeur.org/onix/3.1/reference}'
 
 HARDCOVER_API_URL = 'https://api.hardcover.app/v1/graphql'
 
@@ -97,8 +96,8 @@ class ProductTemplate(models.Model):
                     if vals:
                         all_vals.update(vals)
                         sources.append('Titlepage')
-            except Exception as e:
-                _logger.warning("Failed to fetch Titlepage data for ISBN %s: %s", self.barcode, e)
+            except Exception:
+                _logger.exception("Failed to fetch Titlepage data for ISBN %s", self.barcode)
 
         if not hardcover_key and not titlepage_token:
             return {
@@ -141,8 +140,8 @@ class ProductTemplate(models.Model):
                     titlepage_vals = self._titlepage_parse_product(product_xml, force=True)
                     if titlepage_vals:
                         sources.append('Titlepage')
-            except Exception as e:
-                _logger.warning("Failed to fetch Titlepage data for ISBN %s: %s", self.barcode, e)
+            except Exception:
+                _logger.exception("Failed to fetch Titlepage data for ISBN %s", self.barcode)
 
         if not hardcover_key and not titlepage_token:
             raise UserError(_('Configure API keys in Settings > Inventory > Barcode to auto-fetch book data.'))
@@ -287,15 +286,8 @@ class ProductTemplate(models.Model):
             if response.status_code == 404:
                 return None
             response.raise_for_status()
-            # Response may be gzip-compressed XML; requests handles decoding
             root = ET.fromstring(response.content)
-            # Detect ONIX namespace from the response (API may return 3.0 or 3.1)
-            self._onix_ns = ONIX_NS_31
-            product = root.find(f'{ONIX_NS_31}Product')
-            if product is None:
-                self._onix_ns = ONIX_NS_30
-                product = root.find(f'{ONIX_NS_30}Product')
-            return product
+            return root.find(f'{ONIX_NS}Product')
         except requests.RequestException as e:
             _logger.warning("Titlepage API request failed for ISBN %s: %s", isbn_clean, e)
             return None
@@ -303,40 +295,42 @@ class ProductTemplate(models.Model):
             _logger.warning("Failed to parse Titlepage ONIX XML for ISBN %s: %s", isbn_clean, e)
             return None
 
-    def _titlepage_find(self, element, path):
+    @staticmethod
+    def _titlepage_find(element, path):
         """Find a child element using ONIX-namespaced path."""
-        ns = getattr(self, '_onix_ns', ONIX_NS_31)
         parts = path.split('/')
         current = element
         for part in parts:
             if current is None:
                 return None
-            current = current.find(f'{ns}{part}')
+            current = current.find(f'{ONIX_NS}{part}')
         return current
 
-    def _titlepage_findall(self, element, path):
+    @staticmethod
+    def _titlepage_findall(element, path):
         """Find all matching child elements using ONIX-namespaced path."""
-        ns = getattr(self, '_onix_ns', ONIX_NS_31)
-        ns_path = '/'.join(f'{ns}{p}' for p in path.split('/'))
+        ns_path = '/'.join(f'{ONIX_NS}{p}' for p in path.split('/'))
         return element.findall(ns_path)
 
     def _titlepage_parse_product(self, product, force=False):
-        """Parse ONIX 3.1 Product element into product field values.
+        """Parse ONIX Product element into product field values.
         Only sets fields that are not already populated on self (unless force=True)."""
         vals = {}
-        descriptive = self._titlepage_find(product, 'DescriptiveDetail')
-        collateral = self._titlepage_find(product, 'CollateralDetail')
-        publishing = self._titlepage_find(product, 'PublishingDetail')
+        _find = self._titlepage_find
+        _findall = self._titlepage_findall
+        descriptive = _find(product, 'DescriptiveDetail')
+        collateral = _find(product, 'CollateralDetail')
+        publishing = _find(product, 'PublishingDetail')
 
         # Title
         if descriptive is not None and (force or not self.name):
-            for td in self._titlepage_findall(descriptive, 'TitleDetail'):
-                title_type = self._titlepage_find(td, 'TitleType')
+            for td in _findall(descriptive, 'TitleDetail'):
+                title_type = _find(td, 'TitleType')
                 if title_type is not None and title_type.text == '01':
-                    te = self._titlepage_find(td, 'TitleElement')
+                    te = _find(td, 'TitleElement')
                     if te is not None:
-                        title_text = self._titlepage_find(te, 'TitleText')
-                        subtitle = self._titlepage_find(te, 'Subtitle')
+                        title_text = _find(te, 'TitleText')
+                        subtitle = _find(te, 'Subtitle')
                         if title_text is not None and title_text.text:
                             name = title_text.text
                             if subtitle is not None and subtitle.text:
@@ -347,23 +341,23 @@ class ProductTemplate(models.Model):
         # Author
         if descriptive is not None and (force or not self.x_author):
             authors = []
-            for contrib in self._titlepage_findall(descriptive, 'Contributor'):
-                role = self._titlepage_find(contrib, 'ContributorRole')
+            for contrib in _findall(descriptive, 'Contributor'):
+                role = _find(contrib, 'ContributorRole')
                 if role is None or role.text != 'A01':
                     continue
-                name_el = self._titlepage_find(contrib, 'PersonName')
+                name_el = _find(contrib, 'PersonName')
                 if name_el is not None and name_el.text:
                     authors.append(name_el.text)
                     continue
                 # Fall back to PersonNameInverted ("Last, First" -> "First Last")
-                inverted = self._titlepage_find(contrib, 'PersonNameInverted')
+                inverted = _find(contrib, 'PersonNameInverted')
                 if inverted is not None and inverted.text:
                     parts = [p.strip() for p in inverted.text.split(',', 1)]
                     authors.append(' '.join(reversed(parts)) if len(parts) == 2 else inverted.text)
                     continue
                 # Fall back to NamesBeforeKey + KeyNames
-                before = self._titlepage_find(contrib, 'NamesBeforeKey')
-                key = self._titlepage_find(contrib, 'KeyNames')
+                before = _find(contrib, 'NamesBeforeKey')
+                key = _find(contrib, 'KeyNames')
                 if key is not None and key.text:
                     full = f"{before.text} {key.text}" if before is not None and before.text else key.text
                     authors.append(full)
@@ -372,16 +366,16 @@ class ProductTemplate(models.Model):
 
         # Publisher
         if publishing is not None and (force or not self.x_publisher):
-            publisher_el = self._titlepage_find(publishing, 'Publisher/PublisherName')
+            publisher_el = _find(publishing, 'Publisher/PublisherName')
             if publisher_el is not None and publisher_el.text:
                 vals['x_publisher'] = publisher_el.text
 
         # Publication date (role 01 = publication date)
         if publishing is not None and (force or not self.x_publication_date):
-            for pd in self._titlepage_findall(publishing, 'PublishingDate'):
-                role = self._titlepage_find(pd, 'PublishingDateRole')
+            for pd in _findall(publishing, 'PublishingDate'):
+                role = _find(pd, 'PublishingDateRole')
                 if role is not None and role.text == '01':
-                    date_el = self._titlepage_find(pd, 'Date')
+                    date_el = _find(pd, 'Date')
                     if date_el is not None and date_el.text:
                         raw = date_el.text
                         # Convert YYYYMMDD to YYYY-MM-DD
@@ -392,22 +386,22 @@ class ProductTemplate(models.Model):
 
         # Description (TextType 03 = main description)
         if collateral is not None and (force or not self.description_ecommerce):
-            for tc in self._titlepage_findall(collateral, 'TextContent'):
-                text_type = self._titlepage_find(tc, 'TextType')
+            for tc in _findall(collateral, 'TextContent'):
+                text_type = _find(tc, 'TextType')
                 if text_type is not None and text_type.text == '03':
-                    text_el = self._titlepage_find(tc, 'Text')
+                    text_el = _find(tc, 'Text')
                     if text_el is not None and text_el.text:
                         vals['description_ecommerce'] = text_el.text
                     break
 
         # Cover image (ResourceContentType 01 = front cover)
         if collateral is not None and (force or not self.image_1920):
-            for sr in self._titlepage_findall(collateral, 'SupportingResource'):
-                rct = self._titlepage_find(sr, 'ResourceContentType')
+            for sr in _findall(collateral, 'SupportingResource'):
+                rct = _find(sr, 'ResourceContentType')
                 if rct is not None and rct.text == '01':
-                    rv = self._titlepage_find(sr, 'ResourceVersion')
+                    rv = _find(sr, 'ResourceVersion')
                     if rv is not None:
-                        link = self._titlepage_find(rv, 'ResourceLink')
+                        link = _find(rv, 'ResourceLink')
                         if link is not None and link.text:
                             image_data = self._hardcover_download_image(link.text)
                             if image_data:
@@ -416,10 +410,10 @@ class ProductTemplate(models.Model):
 
         # Weight (MeasureType 08 = weight)
         if descriptive is not None and (force or not self.weight):
-            for measure in self._titlepage_findall(descriptive, 'Measure'):
-                mtype = self._titlepage_find(measure, 'MeasureType')
+            for measure in _findall(descriptive, 'Measure'):
+                mtype = _find(measure, 'MeasureType')
                 if mtype is not None and mtype.text == '08':
-                    measurement = self._titlepage_find(measure, 'Measurement')
+                    measurement = _find(measure, 'Measurement')
                     if measurement is not None and measurement.text:
                         try:
                             grams = float(measurement.text)
@@ -429,16 +423,16 @@ class ProductTemplate(models.Model):
                     break
 
         # NZ supply: list price (PriceType 02, rounded up) and vendor from supplier name
-        for ps in self._titlepage_findall(product, 'ProductSupply'):
-            market_territory = self._titlepage_find(ps, 'Market/Territory/CountriesIncluded')
-            if market_territory is not None and 'NZ' in market_territory.text:
-                supply = self._titlepage_find(ps, 'SupplyDetail')
+        for ps in _findall(product, 'ProductSupply'):
+            market_territory = _find(ps, 'Market/Territory/CountriesIncluded')
+            if market_territory is not None and market_territory.text and 'NZ' in market_territory.text:
+                supply = _find(ps, 'SupplyDetail')
                 if supply is not None:
                     # List price
-                    for price_el in self._titlepage_findall(supply, 'Price'):
-                        price_type = self._titlepage_find(price_el, 'PriceType')
+                    for price_el in _findall(supply, 'Price'):
+                        price_type = _find(price_el, 'PriceType')
                         if price_type is not None and price_type.text == '02':
-                            amount = self._titlepage_find(price_el, 'PriceAmount')
+                            amount = _find(price_el, 'PriceAmount')
                             if amount is not None and amount.text:
                                 try:
                                     price = float(amount.text)
@@ -447,7 +441,7 @@ class ProductTemplate(models.Model):
                                     pass
                             break
                     # Vendor from supplier name
-                    supplier_name_el = self._titlepage_find(supply, 'Supplier/SupplierName')
+                    supplier_name_el = _find(supply, 'Supplier/SupplierName')
                     if supplier_name_el is not None and supplier_name_el.text:
                         self._titlepage_set_vendor(supplier_name_el.text)
                 break
