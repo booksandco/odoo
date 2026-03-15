@@ -40,6 +40,7 @@ query GetBookByISBN($isbn: String!) {
 				book {
 					title
 					description
+					cached_image
 					cached_tags
 					contributions {
 						contribution
@@ -246,14 +247,19 @@ class ProductTemplate(models.Model):
         if release_date and (force or not self.x_publication_date):
             vals['x_publication_date'] = release_date
 
-        # Image
+        # Image (try edition first, fall back to book-level image)
+        image_url = None
         cached_image = edition.get('cached_image')
         if cached_image and isinstance(cached_image, dict):
             image_url = cached_image.get('url')
-            if image_url and (force or not self.image_1920):
-                image_data = self._hardcover_download_image(image_url)
-                if image_data:
-                    vals['image_1920'] = image_data
+        if not image_url:
+            book_image = book.get('cached_image')
+            if book_image and isinstance(book_image, dict):
+                image_url = book_image.get('url')
+        if image_url and (force or not self.image_1920):
+            image_data = self._hardcover_download_image(image_url)
+            if image_data:
+                vals['image_1920'] = image_data
 
         return vals
 
@@ -270,7 +276,6 @@ class ProductTemplate(models.Model):
 
     # --- Titlepage (ONIX 3.1) ---
 
-    @api.model
     def _titlepage_fetch_product(self, isbn, token):
         """Fetch ONIX product XML from Titlepage API. Returns an Element or None."""
         isbn_clean = isbn.strip()
@@ -344,9 +349,24 @@ class ProductTemplate(models.Model):
             authors = []
             for contrib in self._titlepage_findall(descriptive, 'Contributor'):
                 role = self._titlepage_find(contrib, 'ContributorRole')
-                name = self._titlepage_find(contrib, 'PersonName')
-                if role is not None and role.text == 'A01' and name is not None and name.text:
-                    authors.append(name.text)
+                if role is None or role.text != 'A01':
+                    continue
+                name_el = self._titlepage_find(contrib, 'PersonName')
+                if name_el is not None and name_el.text:
+                    authors.append(name_el.text)
+                    continue
+                # Fall back to PersonNameInverted ("Last, First" -> "First Last")
+                inverted = self._titlepage_find(contrib, 'PersonNameInverted')
+                if inverted is not None and inverted.text:
+                    parts = [p.strip() for p in inverted.text.split(',', 1)]
+                    authors.append(' '.join(reversed(parts)) if len(parts) == 2 else inverted.text)
+                    continue
+                # Fall back to NamesBeforeKey + KeyNames
+                before = self._titlepage_find(contrib, 'NamesBeforeKey')
+                key = self._titlepage_find(contrib, 'KeyNames')
+                if key is not None and key.text:
+                    full = f"{before.text} {key.text}" if before is not None and before.text else key.text
+                    authors.append(full)
             if authors:
                 vals['x_author'] = ', '.join(authors)
 
