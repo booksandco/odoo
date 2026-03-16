@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="purchase.email_template_edi_purchase_done" model="mail.template">
+            <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px;">
+    <p style="margin: 0px; padding: 0px; font-size: 13px;">
+        Dear <t t-out="object.partner_id.name or ''">Brandon Freeman</t>
+        <t t-if="object.partner_id.parent_id">
+            (<t t-out="object.partner_id.parent_id.name or ''">Azure Interior</t>)
+        </t>
+        <br/><br/>
+        Here is in attachment a purchase order <span style="font-weight:bold;" t-out="object.name or ''">P00015</span>
+        <t t-if="object.partner_ref">
+            with reference: <t t-out="object.partner_ref or ''">REF_XXX</t>
+        </t>
+        amounting in <span style="font-weight:bold;" t-out="format_amount(object.amount_total, object.currency_id) or ''">$ 10.00</span>
+        from <t t-out="object.company_id.name or ''">YourCompany</t><t t-if="object.partner_id.ref"> (<t t-out="object.partner_id.ref"/>)</t>.
+        <br/><br/>
+        <t t-if="object.date_planned">
+            The receipt is expected for <span style="font-weight:bold;" t-out="format_date(object.date_planned) or ''">05/05/2021</span>.
+            <br/><br/>
+            Could you please acknowledge the receipt of this order?
+            <br/><br/>
+            <a t-att-href="object.get_acknowledge_url()"
+                target="_blank"
+                style="padding: 5px 10px; color: #FFFFFF; text-decoration: none; background-color: #875A7B; border: 1px solid #875A7B; border-radius: 3px">
+                Acknowledge</a>
+        </t>
+        <t t-if="not is_html_empty(object.user_id.signature)">
+            <br/><br/>
+            <div>--<br/><t t-out="object.user_id.signature or ''">Mitchell Admin</t></div>
+        </t>
+        <br/><br/>
+    </p>
+</div></field>
+        </record>
+    </data>
+</odoo>
