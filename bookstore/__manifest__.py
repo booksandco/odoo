@@ -1,6 +1,6 @@
 {
     'name': 'Bookstore',
-    'version': '1.13.8',
+    'version': '1.13.5',
     'category': 'Retail',
     'depends': [
         'account',
@@ -59,7 +59,6 @@
         'data/knowledge_article.xml',
         'data/knowledge_article_favorite.xml',
         'data/mail_message.xml',
-        'data/mail_template_data.xml',
         'data/knowledge_tour.xml',
     ],
     'assets': {
