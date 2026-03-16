@@ -1,6 +1,6 @@
 {
     'name': 'Customer to Order',
-    'version': '1.2.3',
+    'version': '1.2.4',
     'category': 'Inventory',
     'depends': [
         'bookstore',

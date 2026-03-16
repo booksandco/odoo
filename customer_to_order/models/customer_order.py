@@ -57,7 +57,16 @@ class CustomerOrder(models.Model):
                     COALESCE(sol.qty_delivered, 0) AS qty_delivered,
                     (sol.product_uom_qty - COALESCE(sol.qty_delivered, 0)) AS qty_to_deliver,
                     CASE
-                        WHEN COALESCE(sq.free_qty, 0) >= (sol.product_uom_qty - COALESCE(sol.qty_delivered, 0))
+                        WHEN COALESCE(sq.free_qty, 0) + COALESCE((
+                            SELECT SUM(sml.quantity_product_uom)
+                            FROM stock_move_line sml
+                            JOIN stock_move sm ON sm.id = sml.move_id
+                            WHERE sm.sale_line_id = sol.id
+                            AND sm.state NOT IN ('done', 'cancel')
+                            AND sml.location_id IN (
+                                SELECT id FROM stock_location WHERE usage = 'internal'
+                            )
+                        ), 0) >= (sol.product_uom_qty - COALESCE(sol.qty_delivered, 0))
                             THEN 'available'
                         WHEN EXISTS (
                             SELECT 1
