@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 
 import requests
 
-from odoo import api, models, _
+from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
@@ -53,8 +53,61 @@ query GetBookByISBN($isbn: String!) {
 """
 
 
+_DATA_SCORE_WEIGHTS = {
+    'name': 13,
+    'image_1920': 13,
+    'description_ecommerce': 13,
+    'list_price': 10,
+    'x_author': 10,
+    'public_categ_ids': 9,
+    'standard_price': 7,
+    'weight': 7,
+    'x_publisher': 5,
+    'seller_ids': 5,
+    'categ_id': 4,
+    'x_publication_date': 4,
+}
+
+
 class ProductTemplate(models.Model):
     _inherit = 'product.template'
+
+    x_data_score = fields.Integer(
+        string='Data Score',
+        compute='_compute_data_score',
+        store=True,
+    )
+
+    @api.depends(*_DATA_SCORE_WEIGHTS)
+    def _compute_data_score(self):
+        default_categ = self.env.ref('product.product_category_all', raise_if_not_found=False)
+        for rec in self:
+            score = 0
+            if rec.name:
+                score += _DATA_SCORE_WEIGHTS['name']
+            if rec.image_1920:
+                score += _DATA_SCORE_WEIGHTS['image_1920']
+            if rec.x_author:
+                score += _DATA_SCORE_WEIGHTS['x_author']
+            if rec.x_publisher:
+                score += _DATA_SCORE_WEIGHTS['x_publisher']
+            if rec.list_price:
+                score += _DATA_SCORE_WEIGHTS['list_price']
+            if rec.standard_price:
+                score += _DATA_SCORE_WEIGHTS['standard_price']
+            if rec.categ_id and rec.categ_id != default_categ:
+                score += _DATA_SCORE_WEIGHTS['categ_id']
+            if rec.x_publication_date:
+                score += _DATA_SCORE_WEIGHTS['x_publication_date']
+            if rec.public_categ_ids:
+                score += _DATA_SCORE_WEIGHTS['public_categ_ids']
+            if rec.seller_ids:
+                score += _DATA_SCORE_WEIGHTS['seller_ids']
+            if rec.description_ecommerce:
+                score += _DATA_SCORE_WEIGHTS['description_ecommerce']
+            if rec.weight:
+                score += _DATA_SCORE_WEIGHTS['weight']
+            rec.x_data_score = score
 
     @api.onchange('barcode')
     def _onchange_barcode_fetch_book_data(self):
@@ -173,6 +226,26 @@ class ProductTemplate(models.Model):
             'url': f'https://hardcover.app/search?q={self.barcode}',
             'target': 'new',
         }
+
+    @api.model
+    def _cron_refresh_book_data(self):
+        """Scheduled action: refresh data for the ISBN product with the lowest data score that hasn't been tried."""
+        product = self.search(
+            [('barcode', '=like', '978%'), ('x_data_fetch_date', '=', False)],
+            order='x_data_score asc',
+            limit=1,
+        )
+        if not product:
+            _logger.info("Cron: no ISBN products left to refresh")
+            return
+        _logger.info("Cron: refreshing book data for ISBN %s (score %s)", product.barcode, product.x_data_score)
+        try:
+            product.action_refresh_book_data()
+        except UserError:
+            _logger.info("Cron: no data found for ISBN %s", product.barcode)
+        except Exception:
+            _logger.exception("Cron: failed to refresh data for ISBN %s", product.barcode)
+        product.x_data_fetch_date = fields.Datetime.now()
 
     @api.model
     def _hardcover_fetch_edition(self, isbn, api_key):
@@ -453,8 +526,12 @@ class ProductTemplate(models.Model):
     def _titlepage_set_vendor(self, supplier_name):
         """Match supplier name to a res.partner and add as vendor if not already present."""
         partner = self.env['res.partner'].search(
-            [('name', 'ilike', supplier_name)], limit=1,
+            [('x_titlepage_name', '=ilike', supplier_name)], limit=1,
         )
+        if not partner:
+            partner = self.env['res.partner'].search(
+                [('name', 'ilike', supplier_name)], limit=1,
+            )
         if not partner:
             _logger.info("No partner found matching Titlepage supplier: %s", supplier_name)
             return

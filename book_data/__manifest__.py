@@ -1,11 +1,12 @@
 {
     'name': 'Book Data',
-    'version': '1.10.1',
+    'version': '1.10.19',
     'category': 'Retail',
     'summary': 'Fetch book metadata from external APIs (Hardcover, Titlepage)',
     'description': """
 Integrates with Hardcover and Titlepage APIs to fetch book metadata when ISBN is entered.
-Populates description, author, image, publication date, and AU/NZ pricing on products.
+Populates description, author, image, publication date, and NZ pricing on products.
+Periosically updates book data via scheduled tasks to ensure information remains current.
     """,
     'depends': [
         'bookstore',
@@ -13,9 +14,12 @@ Populates description, author, image, publication date, and AU/NZ pricing on pro
     'data': [
         'security/ir.model.access.csv',
         'data/ir_model_fields.xml',
+        'data/ir_cron.xml',
         'views/product_template_views.xml',
+        'views/res_partner_views.xml',
         'views/res_config_settings_views.xml',
     ],
+    'post_init_hook': '_post_init_hook',
     'license': 'LGPL-3',
     'author': 'Harry Bird',
 }
