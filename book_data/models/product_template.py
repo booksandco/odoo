@@ -405,10 +405,7 @@ class ProductTemplate(models.Model):
                         title_text = _find(te, 'TitleText')
                         subtitle = _find(te, 'Subtitle')
                         if title_text is not None and title_text.text:
-                            name = title_text.text
-                            if subtitle is not None and subtitle.text:
-                                name = f"{name}: {subtitle.text}"
-                            vals['name'] = name
+                            vals['name'] = title_text.text
                     break
 
         # Author
