@@ -1,11 +1,11 @@
 {
     'name': 'Book Data',
-    'version': '1.10.8',
+    'version': '1.10.9',
     'category': 'Retail',
     'summary': 'Fetch book metadata from external APIs (Hardcover, Titlepage)',
     'description': """
 Integrates with Hardcover and Titlepage APIs to fetch book metadata when ISBN is entered.
-Populates description, author, image, publication date, and AU/NZ pricing on products.
+Populates description, author, image, publication date, and NZ pricing on products.
     """,
     'depends': [
         'bookstore',

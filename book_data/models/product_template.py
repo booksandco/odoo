@@ -79,7 +79,7 @@ class ProductTemplate(models.Model):
     )
     x_data_score_display = fields.Char(
         string='Data Score',
-        compute='_compute_data_score',
+        compute='_compute_data_score_display',
     )
 
     @api.depends(*_DATA_SCORE_WEIGHTS)
@@ -112,7 +112,11 @@ class ProductTemplate(models.Model):
             if rec.weight:
                 score += _DATA_SCORE_WEIGHTS['weight']
             rec.x_data_score = score
-            rec.x_data_score_display = f'{score}/100'
+
+    @api.depends('x_data_score')
+    def _compute_data_score_display(self):
+        for rec in self:
+            rec.x_data_score_display = f'{rec.x_data_score}/100'
 
     @api.onchange('barcode')
     def _onchange_barcode_fetch_book_data(self):
