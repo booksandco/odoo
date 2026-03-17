@@ -526,8 +526,12 @@ class ProductTemplate(models.Model):
     def _titlepage_set_vendor(self, supplier_name):
         """Match supplier name to a res.partner and add as vendor if not already present."""
         partner = self.env['res.partner'].search(
-            [('name', 'ilike', supplier_name)], limit=1,
+            [('x_titlepage_name', '=ilike', supplier_name)], limit=1,
         )
+        if not partner:
+            partner = self.env['res.partner'].search(
+                [('name', 'ilike', supplier_name)], limit=1,
+            )
         if not partner:
             _logger.info("No partner found matching Titlepage supplier: %s", supplier_name)
             return

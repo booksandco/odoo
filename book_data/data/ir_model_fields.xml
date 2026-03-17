@@ -6,6 +6,12 @@
         <field name="ttype">datetime</field>
         <field name="model_id" ref="product.model_product_template"/>
     </record>
+    <record id="x_titlepage_name_field" model="ir.model.fields">
+        <field name="name">x_titlepage_name</field>
+        <field name="field_description">Titlepage Supplier Name</field>
+        <field name="ttype">char</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+    </record>
     <record id="x_data_score_display_field" model="ir.model.fields">
         <field name="name">x_data_score_display</field>
         <field name="field_description">Data Score Display</field>
