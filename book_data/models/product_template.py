@@ -77,7 +77,7 @@ class ProductTemplate(models.Model):
         compute='_compute_data_score',
         store=True,
     )
-    x_data_fetch_date = fields.Datetime(string='Last Data Fetch')
+
 
     @api.depends(*_DATA_SCORE_WEIGHTS)
     def _compute_data_score(self):
