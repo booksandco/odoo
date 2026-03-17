@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="res_partner_form_view_book_data" model="ir.ui.view">
+        <field name="name">res.partner.form.book_data</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <group name="purchase" position="inside">
+                <field name="x_titlepage_name"/>
+            </group>
+        </field>
+    </record>
+</odoo>
