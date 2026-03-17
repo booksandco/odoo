@@ -1,6 +1,6 @@
 {
     'name': 'Book Data',
-    'version': '1.10.17',
+    'version': '1.10.18',
     'category': 'Retail',
     'summary': 'Fetch book metadata from external APIs (Hardcover, Titlepage)',
     'description': """
@@ -16,6 +16,7 @@ Periosically updates book data via scheduled tasks to ensure information remains
         'data/ir_model_fields.xml',
         'data/ir_cron.xml',
         'views/product_template_views.xml',
+        'views/res_partner_views.xml',
         'views/res_config_settings_views.xml',
     ],
     'license': 'LGPL-3',
