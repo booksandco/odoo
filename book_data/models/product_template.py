@@ -236,7 +236,9 @@ class ProductTemplate(models.Model):
             limit=1,
         )
         if not product:
+            _logger.info("Cron: no ISBN products left to refresh")
             return
+        _logger.info("Cron: refreshing book data for ISBN %s (score %s)", product.barcode, product.x_data_score)
         try:
             product.action_refresh_book_data()
         except UserError:
