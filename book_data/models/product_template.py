@@ -405,10 +405,7 @@ class ProductTemplate(models.Model):
                         title_text = _find(te, 'TitleText')
                         subtitle = _find(te, 'Subtitle')
                         if title_text is not None and title_text.text:
-                            name = title_text.text
-                            if subtitle is not None and subtitle.text:
-                                name = f"{name}: {subtitle.text}"
-                            vals['name'] = name
+                            vals['name'] = title_text.text
                     break
 
         # Author
@@ -437,11 +434,15 @@ class ProductTemplate(models.Model):
             if authors:
                 vals['x_author'] = ', '.join(authors)
 
-        # Publisher
+        # Publisher (prefer imprint over publisher)
         if publishing is not None and (force or not self.x_publisher):
-            publisher_el = _find(publishing, 'Publisher/PublisherName')
-            if publisher_el is not None and publisher_el.text:
-                vals['x_publisher'] = publisher_el.text
+            imprint_el = _find(publishing, 'Imprint/ImprintName')
+            if imprint_el is not None and imprint_el.text:
+                vals['x_publisher'] = imprint_el.text
+            else:
+                publisher_el = _find(publishing, 'Publisher/PublisherName')
+                if publisher_el is not None and publisher_el.text:
+                    vals['x_publisher'] = publisher_el.text
 
         # Publication date (role 01 = publication date)
         if publishing is not None and (force or not self.x_publication_date):
