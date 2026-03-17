@@ -29,7 +29,9 @@
         <field name="inherit_id" ref="product.product_template_only_form_view"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='image_1920']" position="before">
-                <field name="x_data_score" widget="progressbar"/>
+                <div class="float-end text-center" style="clear:right;">
+                    <field name="x_data_score" widget="progressbar"/>
+                </div>
             </xpath>
         </field>
     </record>
