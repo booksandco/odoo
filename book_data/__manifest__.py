@@ -1,6 +1,6 @@
 {
     'name': 'Book Data',
-    'version': '1.10.18',
+    'version': '1.10.19',
     'category': 'Retail',
     'summary': 'Fetch book metadata from external APIs (Hardcover, Titlepage)',
     'description': """
@@ -19,6 +19,7 @@ Periosically updates book data via scheduled tasks to ensure information remains
         'views/res_partner_views.xml',
         'views/res_config_settings_views.xml',
     ],
+    'post_init_hook': '_post_init_hook',
     'license': 'LGPL-3',
     'author': 'Harry Bird',
 }
