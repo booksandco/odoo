@@ -29,9 +29,9 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='image_1920']" position="replace">
                 <div class="oe_avatar d-flex flex-column align-items-center">
-                    <span class="mb-1">Data Score: <field name="x_data_score_display" class="d-inline"/></span>
                     <field name="image_1920" widget="image"
                         options="{'convert_to_webp': True, 'preview_image': 'image_128'}"/>
+                    <span class="mt-1">Data Score: <field name="x_data_score_display" class="d-inline"/></span>
                 </div>
             </xpath>
         </field>

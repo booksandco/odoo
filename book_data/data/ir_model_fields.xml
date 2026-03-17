@@ -6,4 +6,15 @@
         <field name="ttype">datetime</field>
         <field name="model_id" ref="product.model_product_template"/>
     </record>
+    <record id="x_data_score_display_field" model="ir.model.fields">
+        <field name="name">x_data_score_display</field>
+        <field name="field_description">Data Score</field>
+        <field name="ttype">char</field>
+        <field name="model_id" ref="product.model_product_template"/>
+        <field name="depends">x_data_score</field>
+        <field name="compute"><![CDATA[
+for rec in records:
+    rec['x_data_score_display'] = '%s/100' % rec['x_data_score']
+]]></field>
+    </record>
 </odoo>
