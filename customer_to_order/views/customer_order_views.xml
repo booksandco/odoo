@@ -13,7 +13,7 @@
                 </header>
                 <field name="partner_id" string="Customer" widget="many2one_link"/>
                 <field name="sale_order_id" string="Sale Order" widget="many2one_link"/>
-                <field name="product_id" widget="many2one_link"/>
+                <field name="product_tmpl_id" string="Product" widget="many2one_link"/>
                 <field name="qty_ordered"/>
                 <field name="qty_delivered"/>
                 <field name="qty_to_deliver"/>
@@ -33,7 +33,7 @@
         <field name="model">customer.order</field>
         <field name="arch" type="xml">
             <search>
-                <field name="product_id"/>
+                <field name="product_tmpl_id" string="Product"/>
                 <field name="partner_id"/>
                 <field name="sale_order_id"/>
                 <field name="seller_id"/>
