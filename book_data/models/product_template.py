@@ -54,17 +54,18 @@ query GetBookByISBN($isbn: String!) {
 
 
 _DATA_SCORE_WEIGHTS = {
-    'name': 15,
-    'description_ecommerce': 15,
-    'list_price': 12,
-    'x_author': 12,
-    'public_categ_ids': 10,
-    'standard_price': 8,
-    'weight': 8,
+    'name': 13,
+    'image_1920': 13,
+    'description_ecommerce': 13,
+    'list_price': 10,
+    'x_author': 10,
+    'public_categ_ids': 9,
+    'standard_price': 7,
+    'weight': 7,
     'x_publisher': 5,
     'seller_ids': 5,
-    'categ_id': 5,
-    'x_publication_date': 5,
+    'categ_id': 4,
+    'x_publication_date': 4,
 }
 
 
@@ -76,6 +77,7 @@ class ProductTemplate(models.Model):
         compute='_compute_data_score',
         store=True,
     )
+    x_data_fetch_date = fields.Datetime(string='Last Data Fetch')
 
     @api.depends(*_DATA_SCORE_WEIGHTS)
     def _compute_data_score(self):
@@ -84,6 +86,8 @@ class ProductTemplate(models.Model):
             score = 0
             if rec.name:
                 score += _DATA_SCORE_WEIGHTS['name']
+            if rec.image_1920:
+                score += _DATA_SCORE_WEIGHTS['image_1920']
             if rec.x_author:
                 score += _DATA_SCORE_WEIGHTS['x_author']
             if rec.x_publisher:
@@ -223,6 +227,24 @@ class ProductTemplate(models.Model):
             'url': f'https://hardcover.app/search?q={self.barcode}',
             'target': 'new',
         }
+
+    @api.model
+    def _cron_refresh_book_data(self):
+        """Scheduled action: refresh data for the ISBN product with the lowest data score that hasn't been tried."""
+        product = self.search(
+            [('x_is_isbn', '=', True), ('x_data_fetch_date', '=', False)],
+            order='x_data_score asc',
+            limit=1,
+        )
+        if not product:
+            return
+        try:
+            product.action_refresh_book_data()
+        except UserError:
+            _logger.info("Cron: no data found for ISBN %s", product.barcode)
+        except Exception:
+            _logger.exception("Cron: failed to refresh data for ISBN %s", product.barcode)
+        product.x_data_fetch_date = fields.Datetime.now()
 
     @api.model
     def _hardcover_fetch_edition(self, isbn, api_key):
