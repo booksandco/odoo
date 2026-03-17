@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 
 import requests
 
-from odoo import api, models, _
+from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
@@ -53,8 +53,58 @@ query GetBookByISBN($isbn: String!) {
 """
 
 
+_DATA_SCORE_WEIGHTS = {
+    'name': 15,
+    'description_ecommerce': 15,
+    'list_price': 12,
+    'x_author': 12,
+    'public_categ_ids': 10,
+    'standard_price': 8,
+    'weight': 8,
+    'x_publisher': 5,
+    'seller_ids': 5,
+    'categ_id': 5,
+    'x_publication_date': 5,
+}
+
+
 class ProductTemplate(models.Model):
     _inherit = 'product.template'
+
+    x_data_score = fields.Integer(
+        string='Data Score',
+        compute='_compute_data_score',
+        store=True,
+    )
+
+    @api.depends(*_DATA_SCORE_WEIGHTS)
+    def _compute_data_score(self):
+        default_categ = self.env.ref('product.product_category_all', raise_if_not_found=False)
+        for rec in self:
+            score = 0
+            if rec.name:
+                score += _DATA_SCORE_WEIGHTS['name']
+            if rec.x_author:
+                score += _DATA_SCORE_WEIGHTS['x_author']
+            if rec.x_publisher:
+                score += _DATA_SCORE_WEIGHTS['x_publisher']
+            if rec.list_price:
+                score += _DATA_SCORE_WEIGHTS['list_price']
+            if rec.standard_price:
+                score += _DATA_SCORE_WEIGHTS['standard_price']
+            if rec.categ_id and rec.categ_id != default_categ:
+                score += _DATA_SCORE_WEIGHTS['categ_id']
+            if rec.x_publication_date:
+                score += _DATA_SCORE_WEIGHTS['x_publication_date']
+            if rec.public_categ_ids:
+                score += _DATA_SCORE_WEIGHTS['public_categ_ids']
+            if rec.seller_ids:
+                score += _DATA_SCORE_WEIGHTS['seller_ids']
+            if rec.description_ecommerce:
+                score += _DATA_SCORE_WEIGHTS['description_ecommerce']
+            if rec.weight:
+                score += _DATA_SCORE_WEIGHTS['weight']
+            rec.x_data_score = score
 
     @api.onchange('barcode')
     def _onchange_barcode_fetch_book_data(self):
