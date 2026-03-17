@@ -231,7 +231,7 @@ class ProductTemplate(models.Model):
     def _cron_refresh_book_data(self):
         """Scheduled action: refresh data for the ISBN product with the lowest data score that hasn't been tried."""
         product = self.search(
-            [('x_is_isbn', '=', True), ('x_data_fetch_date', '=', False)],
+            [('barcode', '=like', '978%'), ('x_data_fetch_date', '=', False)],
             order='x_data_score asc',
             limit=1,
         )
