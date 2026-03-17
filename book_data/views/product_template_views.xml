@@ -29,7 +29,7 @@
         <field name="inherit_id" ref="product.product_template_only_form_view"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='image_1920']" position="replace">
-                <div class="oe_avatar text-center">
+                <div class="oe_avatar d-flex flex-column align-items-center">
                     <field name="x_data_score" widget="progressbar" class="mb-1"/>
                     <field name="image_1920" widget="image"
                         options="{'convert_to_webp': True, 'preview_image': 'image_128'}"/>
