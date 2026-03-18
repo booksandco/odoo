@@ -52,7 +52,6 @@
         <field name="arch" type="xml">
             <search>
                 <field name="product_id"/>
-                <field name="barcode"/>
                 <field name="vendor_id"/>
                 <filter name="within_window" string="Returnable"
                     domain="[('window_status', '=', 'within_window')]"/>
