@@ -1,0 +1,106 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<odoo>
+    <!-- Return Policy Views -->
+    <record id="vendor_return_policy_tree" model="ir.ui.view">
+        <field name="name">vendor.return.policy.list</field>
+        <field name="model">vendor.return.policy</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="partner_id"/>
+                <field name="min_days"/>
+                <field name="max_days"/>
+                <field name="date_basis"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_vendor_return_policy" model="ir.actions.act_window">
+        <field name="name">Vendor Return Policies</field>
+        <field name="res_model">vendor.return.policy</field>
+        <field name="view_mode">list</field>
+    </record>
+
+    <!-- Return Line Views -->
+    <record id="vendor_return_line_tree" model="ir.ui.view">
+        <field name="name">vendor.return.line.list</field>
+        <field name="model">vendor.return.line</field>
+        <field name="arch" type="xml">
+            <list multi_edit="1">
+                <header>
+                    <button name="action_generate_returns" type="object"
+                        string="Generate Returns" class="btn-primary"/>
+                </header>
+                <field name="product_id" readonly="1"/>
+                <field name="barcode" readonly="1" optional="show"/>
+                <field name="vendor_id" readonly="1"/>
+                <field name="on_hand_qty" readonly="1"/>
+                <field name="invoice_date" readonly="1"/>
+                <field name="age_days" readonly="1"/>
+                <field name="window_status" readonly="1" widget="badge"
+                    decoration-success="window_status == 'within_window'"
+                    decoration-warning="window_status == 'too_early'"
+                    decoration-danger="window_status == 'expired'"/>
+                <field name="return_window_end" readonly="1" optional="hide"/>
+                <field name="return_qty"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="vendor_return_line_search" model="ir.ui.view">
+        <field name="name">vendor.return.line.search</field>
+        <field name="model">vendor.return.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="product_id"/>
+                <field name="barcode"/>
+                <field name="vendor_id"/>
+                <filter name="within_window" string="Returnable"
+                    domain="[('window_status', '=', 'within_window')]"/>
+                <filter name="too_early" string="Too Early"
+                    domain="[('window_status', '=', 'too_early')]"/>
+                <filter name="expired" string="Expired"
+                    domain="[('window_status', '=', 'expired')]"/>
+                <filter name="no_policy" string="No Policy"
+                    domain="[('window_status', '=', 'no_policy')]"/>
+                <separator/>
+                <group expand="0" string="Group By">
+                    <filter name="group_vendor" string="Vendor"
+                        context="{'group_by': 'vendor_id'}"/>
+                    <filter name="group_status" string="Status"
+                        context="{'group_by': 'window_status'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_vendor_return_line" model="ir.actions.act_window">
+        <field name="name">Vendor Return Planning</field>
+        <field name="res_model">vendor.return.line</field>
+        <field name="view_mode">list</field>
+        <field name="search_view_id" ref="vendor_return_line_search"/>
+        <field name="context">{'search_default_group_vendor': 1, 'search_default_within_window': 1}</field>
+    </record>
+
+    <!-- Refresh action in the Action dropdown -->
+    <record id="action_refresh_vendor_returns" model="ir.actions.server">
+        <field name="name">Refresh Stock Data</field>
+        <field name="model_id" ref="model_vendor_return_line"/>
+        <field name="binding_model_id" ref="model_vendor_return_line"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = model.action_refresh()</field>
+    </record>
+
+    <!-- Menus -->
+    <menuitem id="menu_vendor_return_planning"
+        name="Vendor Return Planning"
+        parent="stock.menu_stock_warehouse_mgmt"
+        action="action_vendor_return_line"
+        sequence="30"/>
+
+    <menuitem id="menu_vendor_return_policy"
+        name="Vendor Return Policies"
+        parent="stock.menu_stock_config_settings"
+        action="action_vendor_return_policy"
+        sequence="40"/>
+</odoo>

@@ -1,6 +1,6 @@
 {
     'name': 'Bookstore',
-    'version': '1.13.8',
+    'version': '1.14.0',
     'category': 'Retail',
     'depends': [
         'account',
@@ -26,6 +26,7 @@
         'project_todo',
         'purchase',
         'purchase_stock',
+        'stock_picking_batch',
         'sale_management',
         'sale_purchase',
         'sign',
@@ -40,6 +41,7 @@
         'website_sale_stock',
     ],
     'data': [
+        'security/ir.model.access.csv',
         'data/ir_default.xml',
         'data/res_config_settings.xml',
         'data/stock_warehouse.xml',
@@ -61,6 +63,7 @@
         'data/mail_message.xml',
         'data/mail_template_data.xml',
         'data/knowledge_tour.xml',
+        'data/vendor_return_views.xml',
     ],
     'assets': {
         'web.assets_backend': [
