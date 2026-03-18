@@ -1,193 +1,122 @@
-from datetime import date, timedelta
-
-from odoo import _, api, fields, models
+from odoo import _, fields, models, tools
 from odoo.exceptions import UserError
 
 
 class VendorReturnLine(models.Model):
     _name = 'vendor.return.line'
     _description = 'Vendor Return Planning Line'
+    _auto = False
     _order = 'invoice_date asc, vendor_id'
 
-    product_id = fields.Many2one('product.product', string='Product', required=True, ondelete='cascade')
+    product_id = fields.Many2one('product.product', string='Product', readonly=True)
     barcode = fields.Char(related='product_id.barcode', string='ISBN')
-    vendor_id = fields.Many2one('res.partner', string='Vendor', required=True, ondelete='cascade')
-    on_hand_qty = fields.Float('On Hand', compute='_compute_on_hand_qty')
-    invoice_date = fields.Date('Invoice Date')
-    age_days = fields.Integer('Age (Days)', compute='_compute_age_days')
-    return_window_end = fields.Date('Window End', compute='_compute_return_window', store=True)
+    vendor_id = fields.Many2one('res.partner', string='Vendor', readonly=True)
+    on_hand_qty = fields.Float('On Hand', readonly=True)
+    invoice_date = fields.Date('Invoice Date', readonly=True)
+    age_days = fields.Integer('Age (Days)', readonly=True)
+    return_window_end = fields.Date('Window End', readonly=True)
     window_status = fields.Selection([
         ('too_early', 'Too Early'),
         ('within_window', 'Returnable'),
         ('expired', 'Expired'),
         ('no_policy', 'No Policy'),
-    ], string='Status', compute='_compute_return_window', store=True)
-    return_qty = fields.Float('Return Qty')
+    ], string='Status', readonly=True)
 
-    @api.depends('product_id')
-    def _compute_on_hand_qty(self):
-        if not self.product_id:
-            self.on_hand_qty = 0
-            return
-        quant_data = self.env['stock.quant']._read_group(
-            [('product_id', 'in', self.product_id.ids), ('location_id.usage', '=', 'internal')],
-            ['product_id'],
-            ['quantity:sum'],
-        )
-        qty_map = {product.id: qty for product, qty in quant_data}
-        for line in self:
-            line.on_hand_qty = qty_map.get(line.product_id.id, 0)
-
-    @api.depends('invoice_date')
-    def _compute_age_days(self):
-        today = date.today()
-        for line in self:
-            line.age_days = (today - line.invoice_date).days if line.invoice_date else 0
-
-    @api.depends('invoice_date', 'vendor_id', 'product_id.product_tmpl_id.x_publication_date')
-    def _compute_return_window(self):
-        today = date.today()
-        vendor_ids = self.vendor_id.ids
-        policies = self.env['vendor.return.policy'].search([('partner_id', 'in', vendor_ids)])
-        policy_map = {p.partner_id.id: p for p in policies}
-
-        for line in self:
-            policy = policy_map.get(line.vendor_id.id)
-            if not policy:
-                line.return_window_end = False
-                line.window_status = 'no_policy'
-                continue
-
-            basis_date = False
-            if policy.date_basis == 'publication':
-                basis_date = line.product_id.product_tmpl_id.x_publication_date
-            if not basis_date:
-                basis_date = line.invoice_date
-            if not basis_date:
-                line.return_window_end = False
-                line.window_status = 'no_policy'
-                continue
-
-            window_start = basis_date + timedelta(days=policy.min_days)
-            window_end = basis_date + timedelta(days=policy.max_days)
-            line.return_window_end = window_end
-
-            if today < window_start:
-                line.window_status = 'too_early'
-            elif today <= window_end:
-                line.window_status = 'within_window'
-            else:
-                line.window_status = 'expired'
-
-    @api.model
-    def action_refresh(self):
-        """Refresh return planning lines from current stock and purchase data."""
-        # Products with positive on-hand stock
-        quant_data = self.env['stock.quant']._read_group(
-            [('location_id.usage', '=', 'internal')],
-            ['product_id'],
-            ['quantity:sum'],
-        )
-        product_ids = [product.id for product, qty in quant_data if qty > 0]
-
-        # Oldest receipt date per product
-        move_data = self.env['stock.move']._read_group(
-            [
-                ('product_id', 'in', product_ids),
-                ('state', '=', 'done'),
-                ('location_dest_id.usage', '=', 'internal'),
-                ('location_id.usage', '=', 'supplier'),
-            ],
-            ['product_id'],
-            ['date:min'],
-        )
-        oldest_date = {product.id: dt.date() for product, dt in move_data if dt}
-
-        # Preserve existing lines the user may have edited
-        existing = {(l.product_id.id, l.vendor_id.id): l for l in self.search([])}
-        seen_keys = set()
-        to_create = []
-
-        products = self.env['product.product'].browse(product_ids)
-        for product in products:
-            vendor = product.seller_ids[:1].partner_id
-            if not vendor:
-                continue
-            key = (product.id, vendor.id)
-            seen_keys.add(key)
-            if key not in existing:
-                to_create.append({
-                    'product_id': product.id,
-                    'vendor_id': vendor.id,
-                    'invoice_date': oldest_date.get(product.id),
-                })
-
-        # Remove lines for products no longer in stock
-        stale = self.browse([l.id for key, l in existing.items() if key not in seen_keys])
-        stale.unlink()
-
-        if to_create:
-            self.create(to_create)
-
-        return {
-            'type': 'ir.actions.act_window',
-            'name': _('Vendor Return Planning'),
-            'res_model': 'vendor.return.line',
-            'view_mode': 'list',
-            'target': 'current',
-            'context': {'search_default_group_vendor': 1},
-        }
+    def init(self):
+        tools.drop_view_if_exists(self.env.cr, self._table)
+        self.env.cr.execute("""
+            CREATE OR REPLACE VIEW %s AS (
+                WITH stock AS (
+                    SELECT sq.product_id, SUM(sq.quantity) AS on_hand_qty
+                    FROM stock_quant sq
+                    JOIN stock_location sl ON sl.id = sq.location_id
+                    WHERE sl.usage = 'internal'
+                    GROUP BY sq.product_id
+                    HAVING SUM(sq.quantity) > 0
+                ),
+                receipts AS (
+                    SELECT sm.product_id, MIN(sm.date)::date AS invoice_date
+                    FROM stock_move sm
+                    JOIN stock_location src ON src.id = sm.location_id
+                    JOIN stock_location dest ON dest.id = sm.location_dest_id
+                    WHERE sm.state = 'done'
+                      AND src.usage = 'supplier'
+                      AND dest.usage = 'internal'
+                    GROUP BY sm.product_id
+                )
+                SELECT
+                    pp.id AS id,
+                    pp.id AS product_id,
+                    vendor.partner_id AS vendor_id,
+                    s.on_hand_qty,
+                    r.invoice_date,
+                    CASE WHEN r.invoice_date IS NOT NULL
+                        THEN CURRENT_DATE - r.invoice_date
+                        ELSE 0
+                    END AS age_days,
+                    CASE
+                        WHEN COALESCE(rp.return_max_days, 0) = 0 THEN NULL
+                        WHEN COALESCE(
+                            CASE WHEN rp.return_date_basis = 'publication' THEN pt.x_publication_date END,
+                            r.invoice_date
+                        ) IS NULL THEN NULL
+                        ELSE COALESCE(
+                            CASE WHEN rp.return_date_basis = 'publication' THEN pt.x_publication_date END,
+                            r.invoice_date
+                        ) + rp.return_max_days
+                    END AS return_window_end,
+                    CASE
+                        WHEN COALESCE(rp.return_max_days, 0) = 0 THEN 'no_policy'
+                        WHEN COALESCE(
+                            CASE WHEN rp.return_date_basis = 'publication' THEN pt.x_publication_date END,
+                            r.invoice_date
+                        ) IS NULL THEN 'no_policy'
+                        WHEN CURRENT_DATE < COALESCE(
+                            CASE WHEN rp.return_date_basis = 'publication' THEN pt.x_publication_date END,
+                            r.invoice_date
+                        ) + COALESCE(rp.return_min_days, 0) THEN 'too_early'
+                        WHEN CURRENT_DATE <= COALESCE(
+                            CASE WHEN rp.return_date_basis = 'publication' THEN pt.x_publication_date END,
+                            r.invoice_date
+                        ) + rp.return_max_days THEN 'within_window'
+                        ELSE 'expired'
+                    END AS window_status
+                FROM product_product pp
+                JOIN product_template pt ON pt.id = pp.product_tmpl_id
+                JOIN stock s ON s.product_id = pp.id
+                LEFT JOIN receipts r ON r.product_id = pp.id
+                LEFT JOIN LATERAL (
+                    SELECT ps.partner_id
+                    FROM product_supplierinfo ps
+                    WHERE ps.product_tmpl_id = pp.product_tmpl_id
+                    AND (ps.date_end IS NULL OR ps.date_end >= CURRENT_DATE)
+                    AND (ps.date_start IS NULL OR ps.date_start <= CURRENT_DATE)
+                    ORDER BY ps.sequence, ps.id
+                    LIMIT 1
+                ) vendor ON TRUE
+                LEFT JOIN res_partner rp ON rp.id = vendor.partner_id
+                WHERE vendor.partner_id IS NOT NULL
+            )
+        """ % self._table)
 
     def action_generate_returns(self):
-        """Generate return pickings for selected lines with return_qty > 0."""
-        lines = self.filtered(lambda l: l.return_qty > 0)
+        """Open wizard to set return quantities for selected lines."""
+        lines = self.browse(self.env.context.get('active_ids', []))
         if not lines:
-            raise UserError(_("Please set a return quantity on at least one selected line."))
-
-        warehouse = self.env['stock.warehouse'].search([
-            ('company_id', '=', self.env.company.id),
-        ], limit=1)
-        picking_type = warehouse.out_type_id
-        supplier_location = self.env.ref('stock.stock_location_suppliers')
-
-        pickings = self.env['stock.picking']
-        for vendor in lines.vendor_id:
-            vendor_lines = lines.filtered(lambda l: l.vendor_id == vendor)
-            picking = self.env['stock.picking'].create({
-                'picking_type_id': picking_type.id,
-                'partner_id': vendor.id,
-                'location_id': picking_type.default_location_src_id.id,
-                'location_dest_id': supplier_location.id,
-                'origin': _('Vendor Return'),
-            })
-            for line in vendor_lines:
-                self.env['stock.move'].create({
-                    'name': line.product_id.display_name,
-                    'product_id': line.product_id.id,
-                    'product_uom_qty': line.return_qty,
-                    'product_uom': line.product_id.uom_id.id,
-                    'picking_id': picking.id,
-                    'location_id': picking.location_id.id,
-                    'location_dest_id': picking.location_dest_id.id,
-                })
-            picking.action_confirm()
-            picking.action_assign()
-            pickings |= picking
-
-        lines.unlink()
-
-        if len(pickings) == 1:
-            return {
-                'type': 'ir.actions.act_window',
-                'name': _('Return'),
-                'res_model': 'stock.picking',
-                'res_id': pickings.id,
-                'view_mode': 'form',
-            }
+            raise UserError(_("Please select at least one line."))
+        wizard = self.env['vendor.return.wizard'].create({
+            'line_ids': [(0, 0, {
+                'product_id': line.product_id.id,
+                'vendor_id': line.vendor_id.id,
+                'on_hand_qty': line.on_hand_qty,
+                'return_qty': 0,
+            }) for line in lines],
+        })
         return {
             'type': 'ir.actions.act_window',
-            'name': _('Returns'),
-            'res_model': 'stock.picking',
-            'domain': [('id', 'in', pickings.ids)],
-            'view_mode': 'list,form',
+            'name': _('Generate Returns'),
+            'res_model': 'vendor.return.wizard',
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'target': 'new',
         }

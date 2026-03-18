@@ -1,4 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_vendor_return_policy_manager,vendor.return.policy.manager,model_vendor_return_policy,stock.group_stock_manager,1,1,1,1
-access_vendor_return_policy_user,vendor.return.policy.user,model_vendor_return_policy,stock.group_stock_user,1,0,0,0
-access_vendor_return_line_user,vendor.return.line.user,model_vendor_return_line,stock.group_stock_user,1,1,1,1
+access_vendor_return_line_user,vendor.return.line.user,model_vendor_return_line,stock.group_stock_user,1,0,0,0
+access_vendor_return_wizard_user,vendor.return.wizard.user,model_vendor_return_wizard,stock.group_stock_user,1,1,1,1
+access_vendor_return_wizard_line_user,vendor.return.wizard.line.user,model_vendor_return_wizard_line,stock.group_stock_user,1,1,1,1

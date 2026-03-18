@@ -1,23 +1,17 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <odoo>
-    <!-- Return Policy Views -->
-    <record id="vendor_return_policy_tree" model="ir.ui.view">
-        <field name="name">vendor.return.policy.list</field>
-        <field name="model">vendor.return.policy</field>
+    <!-- Return policy fields on vendor form, next to x_titlepage_name -->
+    <record id="res_partner_form_view_return_policy" model="ir.ui.view">
+        <field name="name">res.partner.form.return.policy</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
-            <list editable="bottom">
-                <field name="partner_id"/>
-                <field name="min_days"/>
-                <field name="max_days"/>
-                <field name="date_basis"/>
-            </list>
+            <group name="purchase" position="inside">
+                <field name="return_min_days"/>
+                <field name="return_max_days"/>
+                <field name="return_date_basis"/>
+            </group>
         </field>
-    </record>
-
-    <record id="action_vendor_return_policy" model="ir.actions.act_window">
-        <field name="name">Vendor Return Policies</field>
-        <field name="res_model">vendor.return.policy</field>
-        <field name="view_mode">list</field>
     </record>
 
     <!-- Return Line Views -->
@@ -25,23 +19,22 @@
         <field name="name">vendor.return.line.list</field>
         <field name="model">vendor.return.line</field>
         <field name="arch" type="xml">
-            <list multi_edit="1">
+            <list>
                 <header>
                     <button name="action_generate_returns" type="object"
                         string="Generate Returns" class="btn-primary"/>
                 </header>
-                <field name="product_id" readonly="1"/>
-                <field name="barcode" readonly="1" optional="show"/>
-                <field name="vendor_id" readonly="1"/>
-                <field name="on_hand_qty" readonly="1"/>
-                <field name="invoice_date" readonly="1"/>
-                <field name="age_days" readonly="1"/>
-                <field name="window_status" readonly="1" widget="badge"
+                <field name="product_id"/>
+                <field name="barcode" optional="show"/>
+                <field name="vendor_id"/>
+                <field name="on_hand_qty"/>
+                <field name="invoice_date"/>
+                <field name="age_days"/>
+                <field name="window_status" widget="badge"
                     decoration-success="window_status == 'within_window'"
                     decoration-warning="window_status == 'too_early'"
                     decoration-danger="window_status == 'expired'"/>
-                <field name="return_window_end" readonly="1" optional="hide"/>
-                <field name="return_qty"/>
+                <field name="return_window_end" optional="hide"/>
             </list>
         </field>
     </record>
@@ -80,14 +73,29 @@
         <field name="context">{'search_default_group_vendor': 1, 'search_default_within_window': 1}</field>
     </record>
 
-    <!-- Refresh action in the Action dropdown -->
-    <record id="action_refresh_vendor_returns" model="ir.actions.server">
-        <field name="name">Refresh Stock Data</field>
-        <field name="model_id" ref="model_vendor_return_line"/>
-        <field name="binding_model_id" ref="model_vendor_return_line"/>
-        <field name="binding_view_types">list</field>
-        <field name="state">code</field>
-        <field name="code">action = model.action_refresh()</field>
+    <!-- Wizard Views -->
+    <record id="vendor_return_wizard_form" model="ir.ui.view">
+        <field name="name">vendor.return.wizard.form</field>
+        <field name="model">vendor.return.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate Returns">
+                <group>
+                    <field name="line_ids" nolabel="1">
+                        <list editable="bottom">
+                            <field name="product_id" readonly="1"/>
+                            <field name="vendor_id" readonly="1"/>
+                            <field name="on_hand_qty" readonly="1"/>
+                            <field name="return_qty"/>
+                        </list>
+                    </field>
+                </group>
+                <footer>
+                    <button name="action_confirm" type="object"
+                        string="Generate Returns" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
     </record>
 
     <!-- Menus -->
@@ -96,10 +104,4 @@
         parent="stock.menu_stock_warehouse_mgmt"
         action="action_vendor_return_line"
         sequence="30"/>
-
-    <menuitem id="menu_vendor_return_policy"
-        name="Vendor Return Policies"
-        parent="stock.menu_stock_config_settings"
-        action="action_vendor_return_policy"
-        sequence="40"/>
 </odoo>
