@@ -62,10 +62,10 @@
                 <filter name="no_policy" string="No Policy"
                     domain="[('window_status', '=', 'no_policy')]"/>
                 <separator/>
-                <group expand="0" string="Group By">
-                    <filter name="group_vendor" string="Vendor"
+                <group>
+                    <filter name="group_vendor" string="Vendor" domain="[]"
                         context="{'group_by': 'vendor_id'}"/>
-                    <filter name="group_status" string="Status"
+                    <filter name="group_status" string="Status" domain="[]"
                         context="{'group_by': 'window_status'}"/>
                 </group>
             </search>
