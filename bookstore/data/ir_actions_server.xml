@@ -61,4 +61,35 @@ for product in records:
         product['description_pickingin'] = f'[{product.list_price}]'
 ]]></field>
       </record>
+    <record id="sync_public_categories" model="ir.actions.server">
+        <field name="name">Sync Public Categories from Product Categories</field>
+        <field name="model_id" ref="product.model_product_template"/>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+PublicCategory = env['product.public.category']
+public_categ_map = {pc.display_name: pc for pc in PublicCategory.search([])}
+
+products = env['product.template'].search([
+    ('categ_id', '!=', False),
+    ('public_categ_ids', '=', False),
+])
+
+matched = 0
+unmatched = set()
+for product in products:
+    path = product.categ_id.complete_name
+    public_categ = public_categ_map.get(path)
+    if public_categ:
+        product.public_categ_ids = [(4, public_categ.id)]
+        matched += 1
+    else:
+        unmatched.add(path)
+
+msg = f"Updated {matched} of {len(products)} products."
+if unmatched:
+    msg += f"\nNo matching public category for:\n" + "\n".join(f"  - {p}" for p in sorted(unmatched))
+raise UserError(msg)
+]]>
+        </field>
+    </record>
 </odoo>
