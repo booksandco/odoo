@@ -80,7 +80,7 @@ for product in products:
     path = product.categ_id.complete_name
     public_categ = public_categ_map.get(path)
     if public_categ:
-        product.public_categ_ids = [(4, public_categ.id)]
+        product.write({'public_categ_ids': [(4, public_categ.id)]})
         matched += 1
     else:
         unmatched.add(path)
