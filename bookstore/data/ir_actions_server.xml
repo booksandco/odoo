@@ -88,7 +88,7 @@ for product in products:
 msg = f"Updated {matched} of {len(products)} products."
 if unmatched:
     msg += f"\nNo matching public category for:\n" + "\n".join(f"  - {p}" for p in sorted(unmatched))
-raise UserError(msg)
+log(msg)
 ]]>
         </field>
     </record>

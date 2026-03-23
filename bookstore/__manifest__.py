@@ -1,6 +1,6 @@
 {
     'name': 'Bookstore',
-    'version': '1.13.9',
+    'version': '1.13.10',
     'category': 'Retail',
     'depends': [
         'account',
