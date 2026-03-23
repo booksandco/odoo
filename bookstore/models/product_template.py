@@ -23,7 +23,7 @@ class ProductTemplate(models.Model):
         )
         if not new_public_categ:
             return
-        old_public_categ = PublicCategory.search(
-            [('name', '=', self._origin.categ_id.name)], limit=1,
-        ) if self._origin.categ_id else PublicCategory
-        self.public_categ_ids = (self.public_categ_ids - old_public_categ) | new_public_categ
+        old_categ_name = self._origin.categ_id.name if self._origin.categ_id else False
+        self.public_categ_ids = (
+            self.public_categ_ids.filtered(lambda c: c.name != old_categ_name) | new_public_categ
+        )
