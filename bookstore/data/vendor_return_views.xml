@@ -21,8 +21,8 @@
         <field name="arch" type="xml">
             <list>
                 <header>
-                    <button name="action_generate_returns" type="object"
-                        string="Generate Returns" class="btn-primary"/>
+                    <button name="action_add_to_return_order" type="object"
+                        string="Add to Return Order" class="btn-primary"/>
                 </header>
                 <field name="product_id"/>
                 <field name="barcode" optional="show"/>
@@ -70,32 +70,7 @@
         <field name="res_model">vendor.return.line</field>
         <field name="view_mode">list</field>
         <field name="search_view_id" ref="vendor_return_line_search"/>
-        <field name="context">{'search_default_group_vendor': 1, 'search_default_within_window': 1}</field>
-    </record>
-
-    <!-- Wizard Views -->
-    <record id="vendor_return_wizard_form" model="ir.ui.view">
-        <field name="name">vendor.return.wizard.form</field>
-        <field name="model">vendor.return.wizard</field>
-        <field name="arch" type="xml">
-            <form string="Generate Returns">
-                <group>
-                    <field name="line_ids" nolabel="1">
-                        <list editable="bottom">
-                            <field name="product_id" readonly="1"/>
-                            <field name="vendor_id" readonly="1"/>
-                            <field name="on_hand_qty" readonly="1"/>
-                            <field name="return_qty"/>
-                        </list>
-                    </field>
-                </group>
-                <footer>
-                    <button name="action_confirm" type="object"
-                        string="Generate Returns" class="btn-primary"/>
-                    <button string="Cancel" class="btn-secondary" special="cancel"/>
-                </footer>
-            </form>
-        </field>
+        <field name="context">{'search_default_group_vendor': 1}</field>
     </record>
 
     <!-- Menus -->
