@@ -110,9 +110,9 @@
                 <filter string="Done" name="filter_done" domain="[('state', '=', 'done')]"/>
                 <filter string="Cancelled" name="filter_cancel" domain="[('state', '=', 'cancel')]"/>
                 <separator/>
-                <group expand="0" string="Group By">
-                    <filter string="Vendor" name="group_vendor" context="{'group_by': 'partner_id'}"/>
-                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                <group>
+                    <filter string="Vendor" name="group_vendor" domain="[]" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Status" name="group_state" domain="[]" context="{'group_by': 'state'}"/>
                 </group>
             </search>
         </field>
