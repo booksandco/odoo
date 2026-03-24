@@ -99,24 +99,49 @@ class VendorReturnLine(models.Model):
             )
         """ % self._table)
 
-    def action_generate_returns(self):
-        """Open wizard to set return quantities for selected lines."""
+    def action_add_to_return_order(self):
+        """Add selected lines to a vendor return order (one per vendor)."""
         lines = self.browse(self.env.context.get('active_ids', []))
         if not lines:
             raise UserError(_("Please select at least one line."))
-        wizard = self.env['vendor.return.wizard'].create({
-            'line_ids': [(0, 0, {
-                'product_id': line.product_id.id,
-                'vendor_id': line.vendor_id.id,
-                'on_hand_qty': line.on_hand_qty,
-                'return_qty': 0,
-            }) for line in lines],
-        })
+
+        ReturnOrder = self.env['vendor.return.order']
+        orders = self.env['vendor.return.order']
+
+        for vendor in lines.vendor_id:
+            vendor_lines = lines.filtered(lambda l: l.vendor_id == vendor)
+            # Find existing draft order for this vendor or create one
+            order = ReturnOrder.search([
+                ('partner_id', '=', vendor.id),
+                ('state', '=', 'draft'),
+            ], limit=1)
+            if not order:
+                order = ReturnOrder.create({'partner_id': vendor.id})
+            for line in vendor_lines:
+                # Skip if product already on the order
+                existing = order.order_line.filtered(
+                    lambda l: l.product_id.id == line.product_id.id
+                )
+                if not existing:
+                    self.env['vendor.return.order.line'].create({
+                        'order_id': order.id,
+                        'product_id': line.product_id.id,
+                        'product_qty': line.on_hand_qty,
+                    })
+            orders |= order
+
+        if len(orders) == 1:
+            return {
+                'type': 'ir.actions.act_window',
+                'name': _('Vendor Return Order'),
+                'res_model': 'vendor.return.order',
+                'res_id': orders.id,
+                'view_mode': 'form',
+            }
         return {
             'type': 'ir.actions.act_window',
-            'name': _('Generate Returns'),
-            'res_model': 'vendor.return.wizard',
-            'res_id': wizard.id,
-            'view_mode': 'form',
-            'target': 'new',
+            'name': _('Vendor Return Orders'),
+            'res_model': 'vendor.return.order',
+            'domain': [('id', 'in', orders.ids)],
+            'view_mode': 'list,form',
         }
