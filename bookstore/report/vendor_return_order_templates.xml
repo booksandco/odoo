@@ -27,6 +27,7 @@
                 <thead style="display: table-row-group">
                     <tr>
                         <th name="th_description" class="text-start"><strong>Description</strong></th>
+                        <th name="th_vendor_ref" class="text-start"><strong>Vendor Invoice #</strong></th>
                         <th name="th_quantity" class="text-end"><strong>Qty</strong></th>
                         <th name="th_uom" class="text-end"><strong>UoM</strong></th>
                         <th name="th_price_unit" class="text-end"><strong>Unit Price</strong></th>
@@ -37,6 +38,9 @@
                         <tr>
                             <td class="text-start">
                                 <span t-field="line.name"/>
+                            </td>
+                            <td class="text-start">
+                                <span t-field="line.vendor_invoice_ref"/>
                             </td>
                             <td class="text-end">
                                 <span t-field="line.product_qty"/>

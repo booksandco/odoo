@@ -27,8 +27,8 @@
                 <field name="product_id"/>
                 <field name="barcode" optional="show"/>
                 <field name="vendor_id"/>
-                <field name="on_hand_qty"/>
-                <field name="invoice_date"/>
+                <field name="remaining_qty"/>
+                <field name="receipt_date"/>
                 <field name="age_days"/>
                 <field name="window_status" widget="badge"
                     decoration-success="window_status == 'within_window'"
