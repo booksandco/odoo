@@ -41,6 +41,7 @@ class VendorReturnLine(models.Model):
                         sm.id AS move_id,
                         sm.product_id,
                         sm.company_id,
+                        sm.purchase_line_id,
                         sp.partner_id AS vendor_id,
                         sm.date::date AS receipt_date,
                         sm.quantity AS receipt_qty,
@@ -55,6 +56,17 @@ class VendorReturnLine(models.Model):
                     WHERE sm.state = 'done'
                       AND src.usage = 'supplier'
                       AND dest.usage = 'internal'
+                ),
+                bill_dates AS (
+                    SELECT DISTINCT ON (aml.purchase_line_id)
+                        aml.purchase_line_id,
+                        am.invoice_date
+                    FROM account_move_line aml
+                    JOIN account_move am ON am.id = aml.move_id
+                    WHERE aml.purchase_line_id IS NOT NULL
+                      AND am.move_type = 'in_invoice'
+                      AND am.state = 'posted'
+                    ORDER BY aml.purchase_line_id, am.invoice_date ASC
                 )
                 SELECT
                     r.move_id AS id,
@@ -72,11 +84,15 @@ class VendorReturnLine(models.Model):
                         WHEN COALESCE(
                             CASE WHEN rp.return_date_basis = 'publication'
                                  THEN pt.x_publication_date END,
+                            CASE WHEN rp.return_date_basis = 'invoice'
+                                 THEN bd.invoice_date END,
                             r.receipt_date
                         ) IS NULL THEN NULL
                         ELSE COALESCE(
                             CASE WHEN rp.return_date_basis = 'publication'
                                  THEN pt.x_publication_date END,
+                            CASE WHEN rp.return_date_basis = 'invoice'
+                                 THEN bd.invoice_date END,
                             r.receipt_date
                         ) + rp.return_max_days
                     END AS return_window_end,
@@ -85,16 +101,22 @@ class VendorReturnLine(models.Model):
                         WHEN COALESCE(
                             CASE WHEN rp.return_date_basis = 'publication'
                                  THEN pt.x_publication_date END,
+                            CASE WHEN rp.return_date_basis = 'invoice'
+                                 THEN bd.invoice_date END,
                             r.receipt_date
                         ) IS NULL THEN 'no_policy'
                         WHEN CURRENT_DATE < COALESCE(
                             CASE WHEN rp.return_date_basis = 'publication'
                                  THEN pt.x_publication_date END,
+                            CASE WHEN rp.return_date_basis = 'invoice'
+                                 THEN bd.invoice_date END,
                             r.receipt_date
                         ) + COALESCE(rp.return_min_days, 0) THEN 'too_early'
                         WHEN CURRENT_DATE <= COALESCE(
                             CASE WHEN rp.return_date_basis = 'publication'
                                  THEN pt.x_publication_date END,
+                            CASE WHEN rp.return_date_basis = 'invoice'
+                                 THEN bd.invoice_date END,
                             r.receipt_date
                         ) + rp.return_max_days THEN 'within_window'
                         ELSE 'expired'
@@ -105,6 +127,7 @@ class VendorReturnLine(models.Model):
                     AND s.company_id = r.company_id
                 JOIN product_product pp ON pp.id = r.product_id
                 JOIN product_template pt ON pt.id = pp.product_tmpl_id
+                LEFT JOIN bill_dates bd ON bd.purchase_line_id = r.purchase_line_id
                 LEFT JOIN res_partner rp ON rp.id = r.vendor_id
                 WHERE GREATEST(0, LEAST(
                     r.receipt_qty,
