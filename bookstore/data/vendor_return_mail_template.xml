@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="email_template_vendor_return" model="mail.template">
+            <field name="name">Vendor Return: Return Order</field>
+            <field name="model_id" ref="bookstore.model_vendor_return_order"/>
+            <field name="subject">{{ object.company_id.name }} Vendor Return (Ref {{ object.name or 'n/a' }})</field>
+            <field name="partner_to" eval="False"/>
+            <field name="use_default_to" eval="True"/>
+            <field name="description">Sent to vendor with the return order attached</field>
+            <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px;">
+    <p style="margin: 0px; padding: 0px; font-size: 13px;">
+        Dear <t t-out="object.partner_id.name or ''">Vendor Name</t>
+        <t t-if="object.partner_id.parent_id">
+            (<t t-out="object.partner_id.parent_id.name or ''">Parent Company</t>)
+        </t>
+        <br/><br/>
+        Please find attached a return request <span style="font-weight:bold;" t-out="object.name or ''">VR/00001</span>
+        from <t t-out="object.company_id.name or ''">YourCompany</t>.
+        <br/><br/>
+        If you have any questions, please do not hesitate to contact us.
+        <br/><br/>
+        Best regards,
+    </p>
+</div></field>
+            <field name="report_template_ids" eval="[(4, ref('bookstore.action_report_vendor_return_order'))]"/>
+            <field name="auto_delete" eval="True"/>
+        </record>
+    </data>
+</odoo>

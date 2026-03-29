@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<template id="report_vendor_return_order_document">
+    <t t-call="web.external_layout">
+        <t t-set="o" t-value="o.with_context(lang=o.partner_id.lang)"/>
+        <t t-set="address">
+            <div t-field="o.partner_id"
+                 t-options='{"widget": "contact", "fields": ["address", "name", "phone"], "no_marker": True, "phone_icons": True}'/>
+        </t>
+        <div class="page">
+            <div class="oe_structure"/>
+
+            <div class="mt-4">
+                <t t-set="layout_document_title">
+                    Vendor Return #<span t-field="o.name"/>
+                </t>
+            </div>
+
+            <div id="informations" class="row mb-4">
+                <div t-if="o.date_order" class="col-3 bm-2">
+                    <strong>Date:</strong>
+                    <p t-field="o.date_order" t-options="{'date_only': 'true'}" class="m-0"/>
+                </div>
+            </div>
+
+            <table class="table o_main_table table-borderless">
+                <thead style="display: table-row-group">
+                    <tr>
+                        <th name="th_description" class="text-start"><strong>Description</strong></th>
+                        <th name="th_quantity" class="text-end"><strong>Qty</strong></th>
+                        <th name="th_uom" class="text-end"><strong>UoM</strong></th>
+                        <th name="th_price_unit" class="text-end"><strong>Unit Price</strong></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-foreach="o.order_line" t-as="line">
+                        <tr>
+                            <td class="text-start">
+                                <span t-field="line.name"/>
+                            </td>
+                            <td class="text-end">
+                                <span t-field="line.product_qty"/>
+                            </td>
+                            <td class="text-end">
+                                <span t-field="line.product_uom"/>
+                            </td>
+                            <td class="text-end">
+                                <span t-field="line.price_unit"/>
+                            </td>
+                        </tr>
+                    </t>
+                </tbody>
+            </table>
+
+            <p t-if="not is_html_empty(o.note)" t-field="o.note" class="mt-4"/>
+            <div class="oe_structure"/>
+        </div>
+    </t>
+</template>
+
+<template id="report_vendor_return_order">
+    <t t-call="web.html_container">
+        <t t-foreach="docs" t-as="o">
+            <t t-call="bookstore.report_vendor_return_order_document" t-lang="o.partner_id.lang"/>
+        </t>
+    </t>
+</template>
+</odoo>

@@ -52,7 +52,36 @@ class VendorReturnOrder(models.Model):
             order.invoice_count = len(order.invoice_ids)
 
     def action_send(self):
+        self.ensure_one()
         self.write({'state': 'sent'})
+        ir_model_data = self.env['ir.model.data']
+        try:
+            template_id = ir_model_data._xmlid_lookup('bookstore.email_template_vendor_return')[1]
+        except ValueError:
+            template_id = False
+        try:
+            compose_form_id = ir_model_data._xmlid_lookup('mail.email_compose_message_wizard_form')[1]
+        except ValueError:
+            compose_form_id = False
+        ctx = dict(self.env.context or {})
+        ctx.update({
+            'default_model': 'vendor.return.order',
+            'default_res_ids': self.ids,
+            'default_template_id': template_id,
+            'default_composition_mode': 'comment',
+            'default_email_layout_xmlid': 'mail.mail_notification_layout_with_responsible_signature',
+            'force_email': True,
+        })
+        return {
+            'name': _('Compose Email'),
+            'type': 'ir.actions.act_window',
+            'view_mode': 'form',
+            'res_model': 'mail.compose.message',
+            'views': [(compose_form_id, 'form')],
+            'view_id': compose_form_id,
+            'target': 'new',
+            'context': ctx,
+        }
 
     def action_confirm(self):
         self.write({'state': 'confirmed'})
