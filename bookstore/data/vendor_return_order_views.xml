@@ -64,7 +64,7 @@
                                     <field name="name"/>
                                     <field name="product_qty"/>
                                     <field name="price_unit"/>
-                                    <field name="product_uom"/>
+                                    <field name="product_uom" readonly="1"/>
                                 </list>
                             </field>
                         </page>
