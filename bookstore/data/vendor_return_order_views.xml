@@ -61,7 +61,6 @@
                             <field name="order_line">
                                 <list editable="bottom">
                                     <field name="product_id"/>
-                                    <field name="name"/>
                                     <field name="product_qty"/>
                                     <field name="price_unit"/>
                                     <field name="product_uom" readonly="1"/>

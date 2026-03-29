@@ -158,26 +158,70 @@ class VendorReturnOrder(models.Model):
         self.ensure_one()
         if self.invoice_ids:
             raise UserError(_("A credit note already exists for this return order."))
-        invoice = self.env['account.move'].create({
-            'move_type': 'in_refund',
-            'partner_id': self.partner_id.id,
-            'invoice_origin': self.name,
-            'invoice_line_ids': [(0, 0, {
-                'product_id': line.product_id.id,
-                'name': line.name or line.product_id.display_name,
-                'quantity': line.product_qty,
-                'price_unit': line.price_unit,
-            }) for line in self.order_line],
-        })
-        inv_lines = invoice.invoice_line_ids.filtered(lambda l: not l.display_type)
-        for order_line, inv_line in zip(self.order_line, inv_lines):
-            order_line.invoice_lines = [(4, inv_line.id)]
+
+        lines_by_bill = defaultdict(lambda: self.env['vendor.return.order.line'])
+        lines_no_bill = self.env['vendor.return.order.line']
+        for line in self.order_line:
+            bills = line.source_purchase_line_id.invoice_lines.move_id.filtered(
+                lambda m: m.move_type == 'in_invoice'
+            )
+            if bills:
+                lines_by_bill[bills[0]] |= line
+            else:
+                lines_no_bill |= line
+
+        invoices = self.env['account.move']
+
+        for bill, lines in lines_by_bill.items():
+            invoice = self.env['account.move'].create({
+                'move_type': 'in_refund',
+                'partner_id': self.partner_id.id,
+                'reversed_entry_id': bill.id,
+                'ref': bill.ref,
+                'invoice_origin': self.name,
+                'invoice_line_ids': [(0, 0, {
+                    'product_id': line.product_id.id,
+                    'name': line.name or line.product_id.display_name,
+                    'quantity': line.product_qty,
+                    'price_unit': line.price_unit,
+                }) for line in lines],
+            })
+            inv_lines = invoice.invoice_line_ids.filtered(lambda l: not l.display_type)
+            for order_line, inv_line in zip(lines, inv_lines):
+                order_line.invoice_lines = [(4, inv_line.id)]
+            invoices |= invoice
+
+        if lines_no_bill:
+            invoice = self.env['account.move'].create({
+                'move_type': 'in_refund',
+                'partner_id': self.partner_id.id,
+                'invoice_origin': self.name,
+                'invoice_line_ids': [(0, 0, {
+                    'product_id': line.product_id.id,
+                    'name': line.name or line.product_id.display_name,
+                    'quantity': line.product_qty,
+                    'price_unit': line.price_unit,
+                }) for line in lines_no_bill],
+            })
+            inv_lines = invoice.invoice_line_ids.filtered(lambda l: not l.display_type)
+            for order_line, inv_line in zip(lines_no_bill, inv_lines):
+                order_line.invoice_lines = [(4, inv_line.id)]
+            invoices |= invoice
+
+        if len(invoices) == 1:
+            return {
+                'type': 'ir.actions.act_window',
+                'name': _('Credit Note'),
+                'res_model': 'account.move',
+                'res_id': invoices.id,
+                'view_mode': 'form',
+            }
         return {
             'type': 'ir.actions.act_window',
-            'name': _('Credit Note'),
+            'name': _('Credit Notes'),
             'res_model': 'account.move',
-            'res_id': invoice.id,
-            'view_mode': 'form',
+            'domain': [('id', 'in', invoices.ids)],
+            'view_mode': 'list,form',
         }
 
     def action_view_picking(self):
