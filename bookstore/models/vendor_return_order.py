@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
@@ -90,37 +92,72 @@ class VendorReturnOrder(models.Model):
         for order in self:
             if not order.order_line:
                 raise UserError(_("Please add at least one line before generating picks."))
+            if order.picking_ids.filtered(lambda p: p.state != 'cancel'):
+                raise UserError(_("Transfers already exist for this return order."))
 
-            warehouse = self.env['stock.warehouse'].search([
-                ('company_id', '=', order.company_id.id),
-            ], limit=1)
-            picking_type = warehouse.out_type_id
-            supplier_location = self.env.ref('stock.stock_location_suppliers')
-
-            picking = self.env['stock.picking'].create({
-                'picking_type_id': picking_type.id,
-                'partner_id': order.partner_id.id,
-                'location_id': picking_type.default_location_src_id.id,
-                'location_dest_id': supplier_location.id,
-                'origin': order.name,
-            })
+            lines_by_picking = defaultdict(lambda: self.env['vendor.return.order.line'])
+            lines_without_source = self.env['vendor.return.order.line']
             for line in order.order_line:
-                move = self.env['stock.move'].create({
-                    'product_id': line.product_id.id,
-                    'product_uom_qty': line.product_qty,
-                    'product_uom': line.product_uom.id,
-                    'picking_id': picking.id,
-                    'location_id': picking.location_id.id,
-                    'location_dest_id': picking.location_dest_id.id,
-                })
-                line.move_ids = [(4, move.id)]
-            picking.action_confirm()
-            picking.action_assign()
+                if line.source_move_id:
+                    lines_by_picking[line.source_move_id.picking_id] |= line
+                else:
+                    lines_without_source |= line
 
-        self.write({'state': 'done'})
+            for source_picking, lines in lines_by_picking.items():
+                return_type = source_picking.picking_type_id.return_picking_type_id
+                picking = self.env['stock.picking'].create({
+                    'picking_type_id': (return_type or source_picking.picking_type_id).id,
+                    'partner_id': order.partner_id.id,
+                    'location_id': source_picking.location_dest_id.id,
+                    'location_dest_id': source_picking.location_id.id,
+                    'origin': order.name,
+                })
+                for line in lines:
+                    move = self.env['stock.move'].create({
+                        'name': line.name or line.product_id.display_name,
+                        'product_id': line.product_id.id,
+                        'product_uom_qty': line.product_qty,
+                        'product_uom': line.product_uom.id,
+                        'picking_id': picking.id,
+                        'location_id': picking.location_id.id,
+                        'location_dest_id': picking.location_dest_id.id,
+                        'origin_returned_move_id': line.source_move_id.id,
+                    })
+                    line.move_ids = [(4, move.id)]
+                picking.action_confirm()
+                picking.action_assign()
+
+            if lines_without_source:
+                warehouse = self.env['stock.warehouse'].search([
+                    ('company_id', '=', order.company_id.id),
+                ], limit=1)
+                picking_type = warehouse.out_type_id
+                supplier_location = self.env.ref('stock.stock_location_suppliers')
+                picking = self.env['stock.picking'].create({
+                    'picking_type_id': picking_type.id,
+                    'partner_id': order.partner_id.id,
+                    'location_id': picking_type.default_location_src_id.id,
+                    'location_dest_id': supplier_location.id,
+                    'origin': order.name,
+                })
+                for line in lines_without_source:
+                    move = self.env['stock.move'].create({
+                        'name': line.name or line.product_id.display_name,
+                        'product_id': line.product_id.id,
+                        'product_uom_qty': line.product_qty,
+                        'product_uom': line.product_uom.id,
+                        'picking_id': picking.id,
+                        'location_id': picking.location_id.id,
+                        'location_dest_id': picking.location_dest_id.id,
+                    })
+                    line.move_ids = [(4, move.id)]
+                picking.action_confirm()
+                picking.action_assign()
 
     def action_create_invoice(self):
         self.ensure_one()
+        if self.invoice_ids:
+            raise UserError(_("A credit note already exists for this return order."))
         invoice = self.env['account.move'].create({
             'move_type': 'in_refund',
             'partner_id': self.partner_id.id,
@@ -132,10 +169,9 @@ class VendorReturnOrder(models.Model):
                 'price_unit': line.price_unit,
             }) for line in self.order_line],
         })
-        for inv_line in invoice.invoice_line_ids:
-            order_line = self.order_line.filtered(lambda l: l.product_id == inv_line.product_id)
-            if order_line:
-                order_line[0].invoice_lines = [(4, inv_line.id)]
+        inv_lines = invoice.invoice_line_ids.filtered(lambda l: not l.display_type)
+        for order_line, inv_line in zip(self.order_line, inv_lines):
+            order_line.invoice_lines = [(4, inv_line.id)]
         return {
             'type': 'ir.actions.act_window',
             'name': _('Credit Note'),
@@ -175,6 +211,10 @@ class VendorReturnOrder(models.Model):
         return action
 
     def action_cancel(self):
+        for order in self:
+            active_picks = order.picking_ids.filtered(lambda p: p.state not in ('done', 'cancel'))
+            if active_picks:
+                raise UserError(_("Please cancel or complete all transfers before cancelling this return order."))
         self.write({'state': 'cancel'})
 
     def action_draft(self):
@@ -191,10 +231,24 @@ class VendorReturnOrderLine(models.Model):
     product_qty = fields.Float(string='Quantity', default=1.0)
     product_uom = fields.Many2one('uom.uom', related='product_id.uom_id', store=True)
     price_unit = fields.Float(string='Unit Price')
-    move_ids = fields.Many2many('stock.move')
-    invoice_lines = fields.Many2many('account.move.line')
+    move_ids = fields.Many2many('stock.move', 'vendor_return_line_stock_move_rel', 'line_id', 'move_id')
+    invoice_lines = fields.Many2many('account.move.line', 'vendor_return_line_invoice_line_rel', 'line_id', 'invoice_line_id')
+    source_move_id = fields.Many2one('stock.move', string='Source Receipt', copy=False)
+    source_purchase_line_id = fields.Many2one(
+        'purchase.order.line', related='source_move_id.purchase_line_id',
+        string='Source PO Line', store=True,
+    )
+    vendor_invoice_ref = fields.Char(
+        compute='_compute_vendor_invoice_ref', string='Vendor Invoice #', store=True,
+    )
 
     @api.depends('product_id')
     def _compute_name(self):
         for line in self:
             line.name = line.product_id.display_name or ''
+
+    @api.depends('source_purchase_line_id.invoice_lines.move_id.ref')
+    def _compute_vendor_invoice_ref(self):
+        for line in self:
+            refs = line.source_purchase_line_id.invoice_lines.move_id.mapped('ref')
+            line.vendor_invoice_ref = ', '.join(filter(None, refs)) or ''
