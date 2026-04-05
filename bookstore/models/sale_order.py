@@ -8,6 +8,6 @@ class SaleOrder(models.Model):
         error = super()._confirmation_error_message()
         if error:
             return error
-        if not self.carrier_id:
+        if not self.carrier_id and not self.is_all_service:
             return _("Please select a shipping method before confirming this order.")
         return False

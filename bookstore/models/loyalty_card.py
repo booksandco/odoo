@@ -8,8 +8,14 @@ class LoyaltyCard(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        res = super().create(vals_list)
-        for card in res:
-            if not card.expiration_date and card.program_id.card_validity_months:
-                card.expiration_date = fields.Date.today() + relativedelta(months=card.program_id.card_validity_months)
-        return res
+        programs = self.env['loyalty.program'].browse(
+            {v['program_id'] for v in vals_list if v.get('program_id')}
+        )
+        validity_by_program = {
+            p.id: p.card_validity_months for p in programs if p.card_validity_months
+        }
+        for vals in vals_list:
+            months = validity_by_program.get(vals.get('program_id'))
+            if months:
+                vals['expiration_date'] = fields.Date.today() + relativedelta(months=months)
+        return super().create(vals_list)
