@@ -45,14 +45,10 @@ class BookscanExportLog(models.Model):
                 pp.barcode                          AS isbn,
                 pol.qty                             AS qty,
                 pol.price_unit                      AS price,
-                po.date_order AT TIME ZONE %s       AS sale_date,
-                rp.zip                              AS postcode,
-                rc.code                             AS country_code
+                po.date_order AT TIME ZONE %s       AS sale_date
             FROM pos_order_line pol
             JOIN pos_order      po  ON po.id = pol.order_id
             JOIN product_product pp ON pp.id = pol.product_id
-            LEFT JOIN res_partner rp ON rp.id = po.partner_id
-            LEFT JOIN res_country rc ON rc.id = rp.country_id
             WHERE po.state IN ('paid', 'done')
               AND (po.date_order AT TIME ZONE %s)::date >= %s
               AND (po.date_order AT TIME ZONE %s)::date <= %s
@@ -71,14 +67,10 @@ class BookscanExportLog(models.Model):
                 pp.barcode                          AS isbn,
                 sol.product_uom_qty                 AS qty,
                 sol.price_unit                      AS price,
-                so.date_order AT TIME ZONE %s       AS sale_date,
-                rp.zip                              AS postcode,
-                rc.code                             AS country_code
+                so.date_order AT TIME ZONE %s       AS sale_date
             FROM sale_order_line    sol
             JOIN sale_order         so  ON so.id = sol.order_id
             JOIN product_product   pp  ON pp.id = sol.product_id
-            LEFT JOIN res_partner  rp  ON rp.id = so.partner_shipping_id
-            LEFT JOIN res_country  rc  ON rc.id = rp.country_id
             WHERE so.state IN ('sale', 'done')
               AND (so.date_order AT TIME ZONE %s)::date >= %s
               AND (so.date_order AT TIME ZONE %s)::date <= %s
@@ -98,18 +90,7 @@ class BookscanExportLog(models.Model):
             qty = int(row['qty'])
             price = f"{row['price']:.2f}"
 
-            if row.get('postcode') and row.get('country_code'):
-                writer.writerow([
-                    store_id,
-                    row['postcode'],
-                    row['country_code'],
-                    row['isbn'],
-                    qty,
-                    price,
-                    sale_date,
-                ])
-            else:
-                writer.writerow([
+            writer.writerow([
                     store_id,
                     row['isbn'],
                     qty,
