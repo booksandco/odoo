@@ -67,10 +67,14 @@ class BookscanExportLog(models.Model):
                 pp.barcode                          AS isbn,
                 sol.product_uom_qty                 AS qty,
                 sol.price_unit                      AS price,
-                so.date_order AT TIME ZONE %s       AS sale_date
+                so.date_order AT TIME ZONE %s       AS sale_date,
+                rp.zip                              AS postcode,
+                rc.code                             AS country_code
             FROM sale_order_line    sol
             JOIN sale_order         so  ON so.id = sol.order_id
             JOIN product_product   pp  ON pp.id = sol.product_id
+            LEFT JOIN res_partner  rp  ON rp.id = so.partner_shipping_id
+            LEFT JOIN res_country  rc  ON rc.id = rp.country_id
             WHERE so.state IN ('sale', 'done')
               AND (so.date_order AT TIME ZONE %s)::date >= %s
               AND (so.date_order AT TIME ZONE %s)::date <= %s
@@ -85,18 +89,26 @@ class BookscanExportLog(models.Model):
         """Build a BookScan-format CSV string from sale rows."""
         buf = io.StringIO()
         writer = csv.writer(buf)
+        writer.writerow([
+            'Identifier', 'PLI', 'ISO', 'Product Code',
+            'Quantity', 'Actual Selling Price', 'Sale Date',
+        ])
         for row in rows:
             sale_date = row['sale_date'].strftime('%Y%m%d')
             qty = int(row['qty'])
             price = f"{row['price']:.2f}"
+            postcode = row.get('postcode') or ''
+            country_code = row.get('country_code') or ''
 
             writer.writerow([
-                    store_id,
-                    row['isbn'],
-                    qty,
-                    price,
-                    sale_date,
-                ])
+                store_id,
+                postcode,
+                country_code,
+                row['isbn'],
+                qty,
+                price,
+                sale_date,
+            ])
         return buf.getvalue()
 
     # ---- SFTP upload ----
@@ -109,18 +121,13 @@ class BookscanExportLog(models.Model):
         port = int(config.get_param('bookscan_export.sftp_port', '22'))
         username = config.get_param('bookscan_export.sftp_username', '')
         password = config.get_param('bookscan_export.sftp_password', '')
-        key_path = config.get_param('bookscan_export.sftp_key_path', '')
 
         if not host or not username:
             raise UserError(_('BookScan SFTP is not configured. Go to Settings > Point of Sale > BookScan Export.'))
 
         transport = paramiko.Transport((host, port))
         try:
-            if key_path:
-                pkey = paramiko.RSAKey.from_private_key_file(key_path)
-                transport.connect(username=username, pkey=pkey)
-            else:
-                transport.connect(username=username, password=password)
+            transport.connect(username=username, password=password)
 
             sftp = paramiko.SFTPClient.from_transport(transport)
             try:

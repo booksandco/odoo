@@ -24,11 +24,6 @@ class ResConfigSettings(models.TransientModel):
         string="SFTP Password",
         config_parameter='bookscan_export.sftp_password',
     )
-    bookscan_sftp_key_path = fields.Char(
-        string="SFTP Private Key Path",
-        config_parameter='bookscan_export.sftp_key_path',
-        help="Absolute path to your SSH private key file on the server. Leave blank to use password auth.",
-    )
     bookscan_outlet_name = fields.Char(
         string="Outlet Name",
         config_parameter='bookscan_export.outlet_name',
