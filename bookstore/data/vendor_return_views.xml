@@ -1,0 +1,82 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<odoo>
+    <!-- Return policy fields on vendor form, next to x_titlepage_name -->
+    <record id="res_partner_form_view_return_policy" model="ir.ui.view">
+        <field name="name">res.partner.form.return.policy</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <group name="purchase" position="inside">
+                <field name="return_min_days"/>
+                <field name="return_max_days"/>
+                <field name="return_date_basis"/>
+            </group>
+        </field>
+    </record>
+
+    <!-- Return Line Views -->
+    <record id="vendor_return_line_tree" model="ir.ui.view">
+        <field name="name">vendor.return.line.list</field>
+        <field name="model">vendor.return.line</field>
+        <field name="arch" type="xml">
+            <list>
+                <header>
+                    <button name="action_add_to_return_order" type="object"
+                        string="Add to Return Order" class="btn-primary"/>
+                </header>
+                <field name="product_id"/>
+                <field name="barcode" optional="show"/>
+                <field name="vendor_id"/>
+                <field name="remaining_qty"/>
+                <field name="receipt_date"/>
+                <field name="age_days"/>
+                <field name="window_status" widget="badge"
+                    decoration-success="window_status == 'within_window'"
+                    decoration-warning="window_status == 'too_early'"
+                    decoration-danger="window_status == 'expired'"/>
+                <field name="return_window_end" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="vendor_return_line_search" model="ir.ui.view">
+        <field name="name">vendor.return.line.search</field>
+        <field name="model">vendor.return.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="product_id"/>
+                <field name="vendor_id"/>
+                <filter name="within_window" string="Returnable"
+                    domain="[('window_status', '=', 'within_window')]"/>
+                <filter name="too_early" string="Too Early"
+                    domain="[('window_status', '=', 'too_early')]"/>
+                <filter name="expired" string="Expired"
+                    domain="[('window_status', '=', 'expired')]"/>
+                <filter name="no_policy" string="No Policy"
+                    domain="[('window_status', '=', 'no_policy')]"/>
+                <separator/>
+                <group>
+                    <filter name="group_vendor" string="Vendor" domain="[]"
+                        context="{'group_by': 'vendor_id'}"/>
+                    <filter name="group_status" string="Status" domain="[]"
+                        context="{'group_by': 'window_status'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_vendor_return_line" model="ir.actions.act_window">
+        <field name="name">Vendor Return Planning</field>
+        <field name="res_model">vendor.return.line</field>
+        <field name="view_mode">list</field>
+        <field name="search_view_id" ref="vendor_return_line_search"/>
+        <field name="context">{'search_default_group_vendor': 1}</field>
+    </record>
+
+    <!-- Menus -->
+    <menuitem id="menu_vendor_return_planning"
+        name="Vendor Return Planning"
+        parent="stock.menu_stock_warehouse_mgmt"
+        action="action_vendor_return_line"
+        sequence="30"/>
+</odoo>
