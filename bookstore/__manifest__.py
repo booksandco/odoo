@@ -1,6 +1,6 @@
 {
     'name': 'Bookstore',
-    'version': '1.14.15',
+    'version': '1.15.0',
     'category': 'Retail',
     'depends': [
         'account',
@@ -68,6 +68,7 @@
         'report/vendor_return_order_templates.xml',
         'data/vendor_return_report.xml',
         'data/vendor_return_mail_template.xml',
+        'data/loyalty_program_views.xml',
     ],
     'assets': {
         'web.assets_backend': [
