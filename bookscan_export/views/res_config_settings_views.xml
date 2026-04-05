@@ -31,6 +31,9 @@
                 <setting id="bookscan_outlet" string="Outlet Name" help="Identifier used in the CSV filename.">
                     <field name="bookscan_outlet_name" placeholder="booksandco"/>
                 </setting>
+                <setting id="bookscan_store" string="Store ID" help="BookScan outlet identifier used as the first column in the CSV.">
+                    <field name="bookscan_store_id" placeholder="bco0001"/>
+                </setting>
                 <setting id="bookscan_manual" string="Manual Export" help="Download a test CSV or upload directly to BookScan.">
                     <button name="action_bookscan_download_csv" type="object"
                             string="Download CSV" class="btn-secondary" icon="fa-download"/>

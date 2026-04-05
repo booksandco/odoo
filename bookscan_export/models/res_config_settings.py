@@ -35,6 +35,12 @@ class ResConfigSettings(models.TransientModel):
         default='booksandco',
         help="Used in the export filename, e.g. booksandco20260227.csv",
     )
+    bookscan_store_id = fields.Char(
+        string="Store ID",
+        config_parameter='bookscan_export.store_id',
+        default='bco0001',
+        help="BookScan outlet identifier used as the first column in the CSV.",
+    )
 
     def _bookscan_export_date_range(self):
         today = fields.Date.context_today(self)
@@ -47,13 +53,14 @@ class ResConfigSettings(models.TransientModel):
         export_model = self.env['bookscan.export.log']
         config = self.env['ir.config_parameter'].sudo()
         outlet_name = config.get_param('bookscan_export.outlet_name', 'booksandco')
+        store_id = config.get_param('bookscan_export.store_id', 'bco0001')
         filename = f"{outlet_name}{date_to.strftime('%Y%m%d')}.csv"
 
         pos_rows = export_model._get_pos_sales(date_from, date_to)
-        web_rows = export_model._get_website_sales(date_from, date_to)
-        all_rows = pos_rows + web_rows
+        sale_rows = export_model._get_sale_order_sales(date_from, date_to)
+        all_rows = pos_rows + sale_rows
 
-        csv_content = export_model._build_csv(all_rows) if all_rows else ''
+        csv_content = export_model._build_csv(all_rows, store_id) if all_rows else ''
 
         attachment = self.env['ir.attachment'].create({
             'name': filename,

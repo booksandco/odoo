@@ -42,7 +42,6 @@ class BookscanExportLog(models.Model):
         tz = self._get_tz()
         self.env.cr.execute("""
             SELECT
-                pc.name                             AS outlet,
                 pp.barcode                          AS isbn,
                 pol.qty                             AS qty,
                 pol.price_unit                      AS price,
@@ -51,7 +50,6 @@ class BookscanExportLog(models.Model):
                 rc.code                             AS country_code
             FROM pos_order_line pol
             JOIN pos_order      po  ON po.id = pol.order_id
-            JOIN pos_config     pc  ON pc.id = po.config_id
             JOIN product_product pp ON pp.id = pol.product_id
             LEFT JOIN res_partner rp ON rp.id = po.partner_id
             LEFT JOIN res_country rc ON rc.id = rp.country_id
@@ -65,12 +63,11 @@ class BookscanExportLog(models.Model):
         return self.env.cr.dictfetchall()
 
     @api.model
-    def _get_website_sales(self, date_from, date_to):
-        """Query confirmed website sale order lines for books in the date range."""
+    def _get_sale_order_sales(self, date_from, date_to):
+        """Query confirmed sale order lines for books in the date range."""
         tz = self._get_tz()
         self.env.cr.execute("""
             SELECT
-                'onlinestore'                       AS outlet,
                 pp.barcode                          AS isbn,
                 sol.product_uom_qty                 AS qty,
                 sol.price_unit                      AS price,
@@ -83,7 +80,6 @@ class BookscanExportLog(models.Model):
             LEFT JOIN res_partner  rp  ON rp.id = so.partner_shipping_id
             LEFT JOIN res_country  rc  ON rc.id = rp.country_id
             WHERE so.state IN ('sale', 'done')
-              AND so.website_id IS NOT NULL
               AND (so.date_order AT TIME ZONE %s)::date >= %s
               AND (so.date_order AT TIME ZONE %s)::date <= %s
               AND pp.barcode IS NOT NULL
@@ -93,7 +89,7 @@ class BookscanExportLog(models.Model):
         return self.env.cr.dictfetchall()
 
     @api.model
-    def _build_csv(self, rows):
+    def _build_csv(self, rows, store_id):
         """Build a BookScan-format CSV string from sale rows."""
         buf = io.StringIO()
         writer = csv.writer(buf)
@@ -104,7 +100,7 @@ class BookscanExportLog(models.Model):
 
             if row.get('postcode') and row.get('country_code'):
                 writer.writerow([
-                    row['outlet'],
+                    store_id,
                     row['postcode'],
                     row['country_code'],
                     row['isbn'],
@@ -114,7 +110,7 @@ class BookscanExportLog(models.Model):
                 ])
             else:
                 writer.writerow([
-                    row['outlet'],
+                    store_id,
                     row['isbn'],
                     qty,
                     price,
@@ -173,10 +169,11 @@ class BookscanExportLog(models.Model):
         """Generate CSV and upload for the given date range."""
         config = self.env['ir.config_parameter'].sudo()
         outlet_name = config.get_param('bookscan_export.outlet_name', 'booksandco')
+        store_id = config.get_param('bookscan_export.store_id', 'bco0001')
 
         pos_rows = self._get_pos_sales(date_from, date_to)
-        web_rows = self._get_website_sales(date_from, date_to)
-        all_rows = pos_rows + web_rows
+        sale_rows = self._get_sale_order_sales(date_from, date_to)
+        all_rows = pos_rows + sale_rows
 
         filename = f"{outlet_name}{date_to.strftime('%Y%m%d')}.csv"
 
@@ -191,7 +188,7 @@ class BookscanExportLog(models.Model):
             })
             return
 
-        csv_content = self._build_csv(all_rows)
+        csv_content = self._build_csv(all_rows, store_id)
 
         try:
             self._sftp_upload(filename, csv_content)
