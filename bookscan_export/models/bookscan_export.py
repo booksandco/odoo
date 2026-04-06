@@ -68,11 +68,12 @@ class BookscanExportLog(models.Model):
                 sol.product_uom_qty                 AS qty,
                 sol.price_unit                      AS price,
                 so.date_order AT TIME ZONE %s       AS sale_date,
-                rp.zip                              AS postcode,
-                rc.code                             AS country_code
+                CASE WHEN dc.name ILIKE '%%collect%%' THEN NULL ELSE rp.zip END AS postcode,
+                CASE WHEN dc.name ILIKE '%%collect%%' THEN NULL ELSE rc.code END AS country_code
             FROM sale_order_line    sol
             JOIN sale_order         so  ON so.id = sol.order_id
             JOIN product_product   pp  ON pp.id = sol.product_id
+            LEFT JOIN delivery_carrier dc ON dc.id = so.carrier_id
             LEFT JOIN res_partner  rp  ON rp.id = so.partner_shipping_id
             LEFT JOIN res_country  rc  ON rc.id = rp.country_id
             WHERE so.state IN ('sale', 'done')
