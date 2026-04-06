@@ -36,6 +36,12 @@ class ResConfigSettings(models.TransientModel):
         default='bco0001',
         help="BookScan outlet identifier used as the first column in the CSV.",
     )
+    bookscan_timezone = fields.Char(
+        string="Timezone",
+        config_parameter='bookscan_export.timezone',
+        default='Pacific/Auckland',
+        help="IANA timezone for interpreting sale dates, e.g. Pacific/Auckland.",
+    )
 
     def _bookscan_export_date_range(self):
         today = fields.Date.context_today(self)

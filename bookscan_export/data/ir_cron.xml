@@ -7,6 +7,7 @@
         <field name="code">model._cron_export()</field>
         <field name="interval_number">1</field>
         <field name="interval_type">weeks</field>
+        <field name="nextcall">2026-04-12 01:00:00</field>
         <field name="active">True</field>
     </record>
 </odoo>

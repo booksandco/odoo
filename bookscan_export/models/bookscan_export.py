@@ -31,7 +31,9 @@ class BookscanExportLog(models.Model):
     # ---- CSV generation ----
 
     def _get_tz(self):
-        return self.env.context.get('tz') or self.env.user.tz or 'Pacific/Auckland'
+        return self.env['ir.config_parameter'].sudo().get_param(
+            'bookscan_export.timezone', 'Pacific/Auckland'
+        )
 
     @api.model
     def _get_pos_sales(self, date_from, date_to):
@@ -146,10 +148,11 @@ class BookscanExportLog(models.Model):
 
     @api.model
     def _cron_export(self):
-        """Scheduled action: export last 7 days of sales to BookScan."""
+        """Scheduled action: export the prior Sunday–Saturday week to BookScan."""
         today = fields.Date.context_today(self)
-        date_to = today - timedelta(days=1)
-        date_from = today - timedelta(days=7)
+        days_since_sunday = (today.weekday() + 1) % 7
+        date_to = today - timedelta(days=days_since_sunday + 1)
+        date_from = date_to - timedelta(days=6)
 
         self._run_export(date_from, date_to)
 
