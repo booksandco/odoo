@@ -14,7 +14,7 @@
         <field name="name">vendor.return.order.form</field>
         <field name="model">vendor.return.order</field>
         <field name="arch" type="xml">
-            <form string="Vendor Return Order">
+            <form string="Vendor Return Order" class="o_purchase_order">
                 <header>
                     <button name="action_send" type="object" string="Send to Vendor"
                         class="btn-primary" invisible="state != 'draft'"/>
@@ -28,7 +28,7 @@
                         invisible="state not in ('draft', 'sent', 'confirmed')"/>
                     <button name="action_draft" type="object" string="Reset to Draft"
                         invisible="state != 'cancel'"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,sent,confirmed,done"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,sent,confirmed,done" readonly="1"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
@@ -44,7 +44,9 @@
                         </button>
                     </div>
                     <div class="oe_title">
-                        <h1>
+                        <span class="o_form_label" invisible="state not in ('draft', 'sent')">Return Request </span>
+                        <span class="o_form_label" invisible="state in ('draft', 'sent')">Vendor Return Order </span>
+                        <h1 class="d-flex">
                             <field name="name" readonly="1"/>
                         </h1>
                     </div>
@@ -62,10 +64,10 @@
                                 readonly="state in ('done', 'cancel')">
                                 <list editable="bottom">
                                     <control>
-                                        <create string="Add a product"/>
+                                        <create name="add_product_control" string="Add a product"/>
                                     </control>
                                     <field name="product_id"/>
-                                    <field name="name" column_invisible="True"/>
+                                    <field name="name" optional="show"/>
                                     <field name="product_qty"/>
                                     <field name="price_unit"/>
                                     <field name="product_uom" readonly="1" force_save="1"/>
@@ -83,6 +85,9 @@
                                             <field name="vendor_invoice_ref" readonly="1"/>
                                             <field name="source_move_id" readonly="1"/>
                                         </group>
+                                    </group>
+                                    <group string="Description">
+                                        <field name="name" nolabel="1"/>
                                     </group>
                                 </form>
                             </field>
