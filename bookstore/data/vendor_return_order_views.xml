@@ -64,8 +64,8 @@
                                     <field name="product_qty"/>
                                     <field name="price_unit"/>
                                     <field name="product_uom" readonly="1"/>
-                                    <field name="vendor_invoice_ref" optional="show" readonly="1"/>
-                                    <field name="source_move_id" optional="hide" readonly="1"/>
+                                    <field name="vendor_invoice_ref" readonly="1"/>
+                                    <field name="source_move_id" column_invisible="1"/>
                                 </list>
                                 <form string="Vendor Return Order Line">
                                     <group>
