@@ -1,6 +1,6 @@
 {
     'name': 'Bookstore',
-    'version': '1.15.11',
+    'version': '1.15.12',
     'category': 'Retail',
     'depends': [
         'account',
@@ -14,7 +14,6 @@
         'hr',
         'hr_attendance',
         'iot',
-        'knowledge',
         'loyalty',
         'mail',
         'mass_mailing',
@@ -46,7 +45,6 @@
         'data/ir_default.xml',
         'data/res_config_settings.xml',
         'data/stock_warehouse.xml',
-        'data/ir_attachment_pre.xml',
         'data/ir_model_fields.xml',
         'data/ir_ui_view.xml',
         'data/base_automation.xml',
@@ -58,21 +56,9 @@
         'data/stock_collect.xml',
         'data/pos_payment_method.xml',
         'data/pos_config.xml',
-        'data/knowledge_cover.xml',
-        'data/knowledge_article.xml',
-        'data/knowledge_article_favorite.xml',
-        'data/mail_message.xml',
-        'data/knowledge_tour.xml',
         'data/loyalty_program_views.xml',
     ],
-    'assets': {
-        'web.assets_backend': [
-            'bookstore/static/src/js/my_tour.js',
-        ]
-    },
     "cloc_exclude": [
-        "data/knowledge_article.xml",
-        "static/src/js/my_tour.js",
     ],
     'license': 'OEEL-1',
     'author': 'Odoo S.A., Harry Bird',
