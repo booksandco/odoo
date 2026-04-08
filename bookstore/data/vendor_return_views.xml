@@ -39,6 +39,34 @@
         </field>
     </record>
 
+    <record id="vendor_return_line_form" model="ir.ui.view">
+        <field name="name">vendor.return.line.form</field>
+        <field name="model">vendor.return.line</field>
+        <field name="arch" type="xml">
+            <form string="Vendor Return Planning Line" create="0" edit="0">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="product_id" widget="many2one_link"/>
+                            <field name="barcode"/>
+                            <field name="vendor_id"/>
+                        </group>
+                        <group>
+                            <field name="remaining_qty"/>
+                            <field name="receipt_date"/>
+                            <field name="age_days"/>
+                            <field name="window_status" widget="badge"
+                                decoration-success="window_status == 'within_window'"
+                                decoration-warning="window_status == 'too_early'"
+                                decoration-danger="window_status == 'expired'"/>
+                            <field name="return_window_end"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
     <record id="vendor_return_line_search" model="ir.ui.view">
         <field name="name">vendor.return.line.search</field>
         <field name="model">vendor.return.line</field>
@@ -68,7 +96,7 @@
     <record id="action_vendor_return_line" model="ir.actions.act_window">
         <field name="name">Vendor Return Planning</field>
         <field name="res_model">vendor.return.line</field>
-        <field name="view_mode">list</field>
+        <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="vendor_return_line_search"/>
         <field name="context">{'search_default_group_vendor': 1}</field>
     </record>
