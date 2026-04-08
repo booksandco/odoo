@@ -61,7 +61,11 @@
                             <field name="order_line"
                                 readonly="state in ('done', 'cancel')">
                                 <list editable="bottom">
+                                    <control>
+                                        <create string="Add a product"/>
+                                    </control>
                                     <field name="product_id"/>
+                                    <field name="name" column_invisible="True"/>
                                     <field name="product_qty"/>
                                     <field name="price_unit"/>
                                     <field name="product_uom" readonly="1" force_save="1"/>
