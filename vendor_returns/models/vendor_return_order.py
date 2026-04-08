@@ -114,7 +114,6 @@ class VendorReturnOrder(models.Model):
                 })
                 for line in lines:
                     move = self.env['stock.move'].create({
-                        'name': line.name or line.product_id.display_name,
                         'product_id': line.product_id.id,
                         'product_uom_qty': line.product_qty,
                         'product_uom': line.product_uom.id,
@@ -142,7 +141,6 @@ class VendorReturnOrder(models.Model):
                 })
                 for line in lines_without_source:
                     move = self.env['stock.move'].create({
-                        'name': line.name or line.product_id.display_name,
                         'product_id': line.product_id.id,
                         'product_uom_qty': line.product_qty,
                         'product_uom': line.product_uom.id,
