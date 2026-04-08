@@ -1,6 +1,6 @@
 {
     'name': 'Bookstore',
-    'version': '1.15.12',
+    'version': '1.15.13',
     'category': 'Retail',
     'depends': [
         'account',
@@ -49,10 +49,7 @@
         'data/ir_ui_view.xml',
         'data/base_automation.xml',
         'data/ir_actions_server.xml',
-        'data/pos_category.xml',
-        'data/product_category.xml',
         'data/product_pricelist.xml',
-        'data/product_product.xml',
         'data/stock_collect.xml',
         'data/pos_payment_method.xml',
         'data/pos_config.xml',
