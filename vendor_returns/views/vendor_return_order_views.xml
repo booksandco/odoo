@@ -58,34 +58,9 @@
                                     <control>
                                         <create name="add_product_control" string="Add a product"/>
                                     </control>
-                                    <field name="state" column_invisible="True"/>
-                                    <field name="product_id"
-                                        readonly="state not in ('draft', 'sent')"/>
-                                    <field name="name" optional="show"/>
+                                    <field name="product_id"/>
                                     <field name="product_qty"/>
-                                    <field name="price_unit"/>
-                                    <field name="product_uom" force_save="1"
-                                        readonly="state not in ('draft', 'sent')"
-                                        optional="show"/>
-                                    <field name="vendor_invoice_ref" readonly="1" optional="show"/>
                                 </list>
-                                <form string="Vendor Return Order Line">
-                                    <group>
-                                        <group>
-                                            <field name="product_id"/>
-                                            <field name="product_qty"/>
-                                            <field name="product_uom"/>
-                                        </group>
-                                        <group>
-                                            <field name="price_unit"/>
-                                            <field name="vendor_invoice_ref" readonly="1"/>
-                                            <field name="source_move_id" readonly="1"/>
-                                        </group>
-                                    </group>
-                                    <group string="Description">
-                                        <field name="name" nolabel="1"/>
-                                    </group>
-                                </form>
                             </field>
                         </page>
                         <page string="Notes" name="notes">
