@@ -1,19 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <odoo>
-    <!-- Return policy fields on vendor form, next to x_titlepage_name -->
-    <record id="res_partner_form_view_return_policy" model="ir.ui.view">
-        <field name="name">res.partner.form.return.policy</field>
-        <field name="model">res.partner</field>
-        <field name="inherit_id" ref="base.view_partner_form"/>
-        <field name="arch" type="xml">
-            <group name="purchase" position="inside">
-                <field name="return_min_days"/>
-                <field name="return_max_days"/>
-                <field name="return_date_basis"/>
-            </group>
-        </field>
-    </record>
-
     <!-- Return Line Views -->
     <record id="vendor_return_line_tree" model="ir.ui.view">
         <field name="name">vendor.return.line.list</field>

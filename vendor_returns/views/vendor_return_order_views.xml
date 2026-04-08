@@ -1,14 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Sequence -->
-    <record id="seq_vendor_return_order" model="ir.sequence">
-        <field name="name">Vendor Return Order</field>
-        <field name="code">vendor.return.order</field>
-        <field name="prefix">VR/</field>
-        <field name="padding">5</field>
-    </record>
-
     <!-- Form View -->
     <record id="vendor_return_order_form" model="ir.ui.view">
         <field name="name">vendor.return.order.form</field>

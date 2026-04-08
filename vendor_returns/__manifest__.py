@@ -1,0 +1,25 @@
+{
+    'name': 'Vendor Returns',
+    'version': '1.0.0',
+    'category': 'Inventory',
+    'summary': 'Manage vendor return orders and return planning',
+    'depends': [
+        'account',
+        'mail',
+        'purchase',
+        'purchase_stock',
+        'stock',
+    ],
+    'data': [
+        'security/ir.model.access.csv',
+        'data/vendor_return_sequence.xml',
+        'views/vendor_return_views.xml',
+        'views/vendor_return_order_views.xml',
+        'views/res_partner_views.xml',
+        'report/vendor_return_order_templates.xml',
+        'data/vendor_return_report.xml',
+        'data/vendor_return_mail_template.xml',
+    ],
+    'license': 'OEEL-1',
+    'author': 'Harry Bird',
+}

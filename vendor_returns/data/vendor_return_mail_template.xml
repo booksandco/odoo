@@ -3,7 +3,7 @@
     <data noupdate="1">
         <record id="email_template_vendor_return" model="mail.template">
             <field name="name">Vendor Return: Return Order</field>
-            <field name="model_id" ref="bookstore.model_vendor_return_order"/>
+            <field name="model_id" ref="vendor_returns.model_vendor_return_order"/>
             <field name="subject">{{ object.company_id.name }} Vendor Return (Ref {{ object.name or 'n/a' }})</field>
             <field name="partner_to" eval="False"/>
             <field name="use_default_to" eval="True"/>
@@ -24,7 +24,7 @@
         Best regards,
     </p>
 </div></field>
-            <field name="report_template_ids" eval="[(4, ref('bookstore.action_report_vendor_return_order'))]"/>
+            <field name="report_template_ids" eval="[(4, ref('vendor_returns.action_report_vendor_return_order'))]"/>
             <field name="auto_delete" eval="True"/>
         </record>
     </data>

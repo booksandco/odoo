@@ -58,7 +58,7 @@ class VendorReturnOrder(models.Model):
         self.write({'state': 'sent'})
         ir_model_data = self.env['ir.model.data']
         try:
-            template_id = ir_model_data._xmlid_lookup('bookstore.email_template_vendor_return')[1]
+            template_id = ir_model_data._xmlid_lookup('vendor_returns.email_template_vendor_return')[1]
         except ValueError:
             template_id = False
         try:
