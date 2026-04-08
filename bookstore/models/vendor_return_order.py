@@ -268,13 +268,23 @@ class VendorReturnOrder(models.Model):
 class VendorReturnOrderLine(models.Model):
     _name = 'vendor.return.order.line'
     _description = 'Vendor Return Order Line'
+    _order = 'order_id, id'
 
     order_id = fields.Many2one('vendor.return.order', required=True, ondelete='cascade')
+    state = fields.Selection(related='order_id.state')
     product_id = fields.Many2one('product.product', required=True)
-    name = fields.Char()
+    name = fields.Char(
+        compute='_compute_product_fields', store=True, readonly=False, precompute=True,
+    )
     product_qty = fields.Float(string='Quantity', default=1.0)
-    product_uom = fields.Many2one('uom.uom', string='Unit of Measure', readonly=True)
-    price_unit = fields.Float(string='Unit Price')
+    product_uom = fields.Many2one(
+        'uom.uom', string='Unit of Measure',
+        compute='_compute_product_fields', store=True, readonly=False, precompute=True,
+    )
+    price_unit = fields.Float(
+        string='Unit Price',
+        compute='_compute_product_fields', store=True, readonly=False, precompute=True,
+    )
     move_ids = fields.Many2many('stock.move', 'vendor_return_line_stock_move_rel', 'line_id', 'move_id')
     invoice_lines = fields.Many2many('account.move.line', 'vendor_return_line_invoice_line_rel', 'line_id', 'invoice_line_id')
     source_move_id = fields.Many2one('stock.move', string='Source Receipt', copy=False)
@@ -286,26 +296,33 @@ class VendorReturnOrderLine(models.Model):
         compute='_compute_vendor_invoice_ref', string='Vendor Invoice #', store=True,
     )
 
-    @api.onchange('product_id')
-    def _onchange_product_id(self):
+    @api.depends('product_id')
+    def _compute_product_fields(self):
         for line in self:
-            if line.product_id:
-                line.name = line.product_id.display_name
-                line.product_uom = line.product_id.uom_id
-            else:
-                line.name = False
-                line.product_uom = False
+            if not line.product_id:
+                continue
+            line.name = line.product_id.display_name
+            line.product_uom = line.product_id.uom_id
+            if not line.price_unit:
+                line.price_unit = line.product_id.standard_price
 
     @api.model_create_multi
     def create(self, vals_list):
-        Product = self.env['product.product']
         for vals in vals_list:
-            product_id = vals.get('product_id')
-            if product_id:
-                product = Product.browse(product_id)
-                vals.setdefault('name', product.display_name)
-                vals.setdefault('product_uom', product.uom_id.id)
+            if vals.get('product_id'):
+                vals.update(self._prepare_add_missing_fields(vals))
         return super().create(vals_list)
+
+    @api.model
+    def _prepare_add_missing_fields(self, values):
+        res = {}
+        onchange_fields = ['name', 'product_uom', 'price_unit']
+        if values.get('product_id') and any(f not in values for f in onchange_fields):
+            line = self.new(values)
+            for field in onchange_fields:
+                if field not in values:
+                    res[field] = line._fields[field].convert_to_write(line[field], line)
+        return res
 
     @api.depends('source_purchase_line_id.invoice_lines.move_id.ref')
     def _compute_vendor_invoice_ref(self):
