@@ -1,6 +1,6 @@
 {
     'name': 'Vendor Returns',
-    'version': '1.0.2',
+    'version': '1.0.3',
     'category': 'Inventory',
     'summary': 'Manage vendor return orders and return planning',
     'depends': [
