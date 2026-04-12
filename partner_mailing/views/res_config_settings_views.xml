@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.partner_mailing</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="mass_mailing.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@name='managa_mail_campaigns_setting_container']" position="after">
+                <block title="Auto-Subscribe" name="partner_mailing_setting_container">
+                    <setting string="Auto-Subscribe New Contacts"
+                             help="Automatically add newly created contacts to a mailing list">
+                        <field name="partner_mailing_list_id"
+                               options="{'no_create': True}"/>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>
