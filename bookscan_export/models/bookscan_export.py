@@ -69,15 +69,10 @@ class BookscanExportLog(models.Model):
                 pp.barcode                          AS isbn,
                 sol.product_uom_qty                 AS qty,
                 sol.price_unit                      AS price,
-                so.date_order AT TIME ZONE %s       AS sale_date,
-                CASE WHEN dc.name::text ILIKE '%%collect%%' THEN NULL ELSE rp.zip END AS postcode,
-                CASE WHEN dc.name::text ILIKE '%%collect%%' THEN NULL ELSE rc.code END AS country_code
+                so.date_order AT TIME ZONE %s       AS sale_date
             FROM sale_order_line    sol
             JOIN sale_order         so  ON so.id = sol.order_id
             JOIN product_product   pp  ON pp.id = sol.product_id
-            LEFT JOIN delivery_carrier dc ON dc.id = so.carrier_id
-            LEFT JOIN res_partner  rp  ON rp.id = so.partner_shipping_id
-            LEFT JOIN res_country  rc  ON rc.id = rp.country_id
             WHERE so.state IN ('sale', 'done')
               AND (so.date_order AT TIME ZONE %s)::date >= %s
               AND (so.date_order AT TIME ZONE %s)::date <= %s
@@ -93,20 +88,16 @@ class BookscanExportLog(models.Model):
         buf = io.StringIO()
         writer = csv.writer(buf)
         writer.writerow([
-            'Identifier', 'PLI', 'ISO', 'Product Code',
+            'Identifier', 'Product Code',
             'Quantity', 'Actual Selling Price', 'Sale Date',
         ])
         for row in rows:
             sale_date = row['sale_date'].strftime('%Y%m%d')
             qty = int(row['qty'])
             price = f"{row['price']:.2f}"
-            postcode = row.get('postcode') or ''
-            country_code = row.get('country_code') or ''
 
             writer.writerow([
                 store_id,
-                postcode,
-                country_code,
                 row['isbn'],
                 qty,
                 price,
