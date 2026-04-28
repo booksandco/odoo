@@ -45,7 +45,10 @@ class ResConfigSettings(models.TransientModel):
 
     def _bookscan_export_date_range(self):
         today = fields.Date.context_today(self)
-        return today - timedelta(days=7), today - timedelta(days=1)
+        days_since_sunday = (today.weekday() + 1) % 7
+        date_to = today - timedelta(days=days_since_sunday + 1)
+        date_from = date_to - timedelta(days=6)
+        return date_from, date_to
 
     def action_bookscan_download_csv(self):
         """Generate CSV and download it for review."""
