@@ -46,7 +46,8 @@ class BookscanExportLog(models.Model):
             SELECT
                 pp.barcode                          AS isbn,
                 pol.qty                             AS qty,
-                pol.price_unit                      AS price,
+                pol.price_unit                      AS price_unit,
+                pol.discount                        AS discount,
                 po.date_order AT TIME ZONE %s       AS sale_date
             FROM pos_order_line pol
             JOIN pos_order      po  ON po.id = pol.order_id
@@ -68,7 +69,8 @@ class BookscanExportLog(models.Model):
             SELECT
                 pp.barcode                          AS isbn,
                 sol.product_uom_qty                 AS qty,
-                sol.price_unit                      AS price,
+                sol.price_unit                      AS price_unit,
+                sol.discount                        AS discount,
                 so.date_order AT TIME ZONE %s       AS sale_date
             FROM sale_order_line    sol
             JOIN sale_order         so  ON so.id = sol.order_id
@@ -94,7 +96,10 @@ class BookscanExportLog(models.Model):
         for row in rows:
             sale_date = row['sale_date'].strftime('%Y%m%d')
             qty = int(row['qty'])
-            price = f"{row['price']:.2f}"
+            price_unit = float(row['price_unit'])
+            discount = float(row.get('discount') or 0.0)
+            actual_price = abs(price_unit * (1 - discount / 100.0))
+            price = f"{actual_price:.2f}"
 
             writer.writerow([
                 store_id,
