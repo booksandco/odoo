@@ -262,6 +262,31 @@ class VendorReturnOrder(models.Model):
     def action_draft(self):
         self.write({'state': 'draft'})
 
+    def _remove_replenishment_rules(self):
+        """Remove active replenishment rules for returned products so reorders are not triggered."""
+        Orderpoint = self.env['stock.warehouse.orderpoint']
+        for order in self:
+            products = order.order_line.product_id
+            if not products:
+                continue
+            location_ids = order.picking_ids.move_ids.location_id.ids
+            if not location_ids:
+                continue
+            orderpoints = Orderpoint.search([
+                ('product_id', 'in', products.ids),
+                ('location_id', 'parent_of', location_ids),
+                ('company_id', '=', order.company_id.id),
+            ])
+            if orderpoints:
+                descriptions = [
+                    _("%s at %s") % (op.product_id.display_name, op.location_id.display_name)
+                    for op in orderpoints
+                ]
+                order.message_post(
+                    body=_("Replenishment rules removed for returned products: %s") % ', '.join(descriptions)
+                )
+                orderpoints.unlink()
+
 
 class VendorReturnOrderLine(models.Model):
     _name = 'vendor.return.order.line'

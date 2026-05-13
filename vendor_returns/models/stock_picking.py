@@ -20,3 +20,4 @@ class StockPicking(models.Model):
                 p.state == 'done' for p in order.picking_ids
             ):
                 order.state = 'done'
+                order._remove_replenishment_rules()
