@@ -116,7 +116,7 @@ class VendorReturnOrder(models.Model):
                     move = self.env['stock.move'].create({
                         'product_id': line.product_id.id,
                         'product_uom_qty': line.product_qty,
-                        'product_uom': line.product_uom.id,
+                        'product_uom': (line.product_uom or line.product_id.uom_id).id,
                         'picking_id': picking.id,
                         'location_id': picking.location_id.id,
                         'location_dest_id': picking.location_dest_id.id,
@@ -143,7 +143,7 @@ class VendorReturnOrder(models.Model):
                     move = self.env['stock.move'].create({
                         'product_id': line.product_id.id,
                         'product_uom_qty': line.product_qty,
-                        'product_uom': line.product_uom.id,
+                        'product_uom': (line.product_uom or line.product_id.uom_id).id,
                         'picking_id': picking.id,
                         'location_id': picking.location_id.id,
                         'location_dest_id': picking.location_dest_id.id,
@@ -296,7 +296,7 @@ class VendorReturnOrderLine(models.Model):
     order_id = fields.Many2one('vendor.return.order', required=True, ondelete='cascade')
     product_id = fields.Many2one('product.product', required=True)
     product_qty = fields.Float(string='Quantity', default=1.0)
-    product_uom = fields.Many2one('uom.uom', string='Unit of Measure')
+    product_uom = fields.Many2one('uom.uom', string='Unit of Measure', required=True)
     price_unit = fields.Float(string='Unit Price')
     move_ids = fields.Many2many('stock.move', 'vendor_return_line_stock_move_rel', 'line_id', 'move_id')
     invoice_lines = fields.Many2many('account.move.line', 'vendor_return_line_invoice_line_rel', 'line_id', 'invoice_line_id')

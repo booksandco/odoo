@@ -60,6 +60,7 @@
                                     </control>
                                     <field name="product_id"/>
                                     <field name="product_qty"/>
+                                    <field name="product_uom"/>
                                 </list>
                             </field>
                         </page>

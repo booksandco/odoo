@@ -165,6 +165,7 @@ class VendorReturnLine(models.Model):
                         'order_id': order.id,
                         'product_id': line.product_id.id,
                         'product_qty': line.remaining_qty,
+                        'product_uom': source.product_uom.id,
                         'price_unit': price,
                         'source_move_id': line.source_move_id.id,
                     })
