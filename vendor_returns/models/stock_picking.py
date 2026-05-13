@@ -6,6 +6,8 @@ class StockPicking(models.Model):
 
     def button_validate(self):
         res = super().button_validate()
+        if isinstance(res, dict):
+            return res
         done_pickings = self.filtered(lambda p: p.state == 'done')
         if done_pickings:
             done_pickings._update_vendor_return_orders()

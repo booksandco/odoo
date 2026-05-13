@@ -6,9 +6,11 @@
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
             <group name="purchase" position="inside">
-                <field name="return_min_days"/>
-                <field name="return_max_days"/>
-                <field name="return_date_basis"/>
+                <group invisible="supplier_rank == 0">
+                    <field name="return_min_days"/>
+                    <field name="return_max_days"/>
+                    <field name="return_date_basis"/>
+                </group>
             </group>
         </field>
     </record>

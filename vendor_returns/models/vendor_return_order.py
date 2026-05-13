@@ -18,7 +18,7 @@ class VendorReturnOrder(models.Model):
         ('done', 'Done'),
         ('cancel', 'Cancelled'),
     ], default='draft', tracking=True)
-    partner_id = fields.Many2one('res.partner', string='Vendor', required=True, tracking=True)
+    partner_id = fields.Many2one('res.partner', string='Vendor', required=True, tracking=True, check_company=True)
     date_order = fields.Datetime(string='Order Date', default=fields.Datetime.now)
     order_line = fields.One2many('vendor.return.order.line', 'order_id', string='Order Lines', copy=True)
     picking_ids = fields.Many2many(
@@ -33,7 +33,7 @@ class VendorReturnOrder(models.Model):
     warehouse_id = fields.Many2one(
         'stock.warehouse', string='Warehouse',
         default=lambda self: self.env['stock.warehouse'].search([('company_id', '=', self.env.company.id)], limit=1),
-        required=True,
+        required=True, check_company=True,
     )
     company_id = fields.Many2one(
         'res.company', default=lambda self: self.env.company, required=True,
@@ -105,6 +105,8 @@ class VendorReturnOrder(models.Model):
             lines_by_picking = defaultdict(lambda: self.env['vendor.return.order.line'])
             lines_without_source = self.env['vendor.return.order.line']
             for line in order.order_line:
+                if line.product_id.type not in ('product', 'consu'):
+                    raise UserError(_("Cannot generate a picking for service product %s.") % line.product_id.display_name)
                 if line.source_move_id:
                     lines_by_picking[line.source_move_id.picking_id] |= line
                 else:
@@ -358,10 +360,10 @@ class VendorReturnOrderLine(models.Model):
     move_ids = fields.Many2many('stock.move', 'vendor_return_line_stock_move_rel', 'line_id', 'move_id', copy=False)
     invoice_lines = fields.Many2many('account.move.line', 'vendor_return_line_invoice_line_rel', 'line_id', 'invoice_line_id', copy=False)
     company_id = fields.Many2one('res.company', related='order_id.company_id', store=True)
-    source_move_id = fields.Many2one('stock.move', string='Source Receipt', copy=False)
+    source_move_id = fields.Many2one('stock.move', string='Source Receipt', copy=False, check_company=True)
     source_purchase_line_id = fields.Many2one(
         'purchase.order.line', related='source_move_id.purchase_line_id',
-        string='Source PO Line', store=True,
+        string='Source PO Line', store=True, check_company=True,
     )
 
     @api.onchange('product_id')

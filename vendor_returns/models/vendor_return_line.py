@@ -29,12 +29,12 @@ class VendorReturnLine(models.Model):
         self.env.cr.execute("""
             CREATE OR REPLACE VIEW %s AS (
                 WITH stock AS (
-                    SELECT sq.product_id, sq.company_id, SUM(sq.quantity) AS on_hand_qty
+                    SELECT sq.product_id, sq.company_id, SUM(sq.available_quantity) AS on_hand_qty
                     FROM stock_quant sq
                     JOIN stock_location sl ON sl.id = sq.location_id
                     WHERE sl.usage = 'internal'
                     GROUP BY sq.product_id, sq.company_id
-                    HAVING SUM(sq.quantity) > 0
+                    HAVING SUM(sq.available_quantity) > 0
                 ),
                 receipts AS (
                     SELECT
@@ -67,6 +67,29 @@ class VendorReturnLine(models.Model):
                       AND am.move_type = 'in_invoice'
                       AND am.state = 'posted'
                     ORDER BY aml.purchase_line_id, am.invoice_date ASC
+                ),
+                planned AS (
+                    SELECT vrol.source_move_id, SUM(vrol.product_qty) AS planned_qty
+                    FROM vendor_return_order_line vrol
+                    JOIN vendor_return_order vro ON vro.id = vrol.order_id
+                    WHERE vro.state NOT IN ('done', 'cancel')
+                    GROUP BY vrol.source_move_id
+                ),
+                basis_dates AS (
+                    SELECT
+                        r.move_id,
+                        COALESCE(
+                            CASE WHEN rp.return_date_basis = 'publication'
+                                 THEN pt.x_publication_date END,
+                            CASE WHEN rp.return_date_basis = 'invoice'
+                                 THEN bd.invoice_date END,
+                            r.receipt_date
+                        ) AS basis_date
+                    FROM receipts r
+                    JOIN product_product pp ON pp.id = r.product_id
+                    JOIN product_template pt ON pt.id = pp.product_tmpl_id
+                    LEFT JOIN bill_dates bd ON bd.purchase_line_id = r.purchase_line_id
+                    LEFT JOIN res_partner rp ON rp.id = r.vendor_id
                 )
                 SELECT
                     r.move_id AS id,
@@ -77,48 +100,18 @@ class VendorReturnLine(models.Model):
                     GREATEST(0, LEAST(
                         r.receipt_qty,
                         s.on_hand_qty - (r.cumulative_from_newest - r.receipt_qty)
-                    )) AS remaining_qty,
+                    ) - COALESCE(p.planned_qty, 0)) AS remaining_qty,
                     CURRENT_DATE - r.receipt_date AS age_days,
                     CASE
                         WHEN COALESCE(rp.return_max_days, 0) = 0 THEN NULL
-                        WHEN COALESCE(
-                            CASE WHEN rp.return_date_basis = 'publication'
-                                 THEN pt.x_publication_date END,
-                            CASE WHEN rp.return_date_basis = 'invoice'
-                                 THEN bd.invoice_date END,
-                            r.receipt_date
-                        ) IS NULL THEN NULL
-                        ELSE COALESCE(
-                            CASE WHEN rp.return_date_basis = 'publication'
-                                 THEN pt.x_publication_date END,
-                            CASE WHEN rp.return_date_basis = 'invoice'
-                                 THEN bd.invoice_date END,
-                            r.receipt_date
-                        ) + rp.return_max_days
+                        WHEN b.basis_date IS NULL THEN NULL
+                        ELSE b.basis_date + rp.return_max_days
                     END AS return_window_end,
                     CASE
                         WHEN COALESCE(rp.return_max_days, 0) = 0 THEN 'no_policy'
-                        WHEN COALESCE(
-                            CASE WHEN rp.return_date_basis = 'publication'
-                                 THEN pt.x_publication_date END,
-                            CASE WHEN rp.return_date_basis = 'invoice'
-                                 THEN bd.invoice_date END,
-                            r.receipt_date
-                        ) IS NULL THEN 'no_policy'
-                        WHEN CURRENT_DATE < COALESCE(
-                            CASE WHEN rp.return_date_basis = 'publication'
-                                 THEN pt.x_publication_date END,
-                            CASE WHEN rp.return_date_basis = 'invoice'
-                                 THEN bd.invoice_date END,
-                            r.receipt_date
-                        ) + COALESCE(rp.return_min_days, 0) THEN 'too_early'
-                        WHEN CURRENT_DATE <= COALESCE(
-                            CASE WHEN rp.return_date_basis = 'publication'
-                                 THEN pt.x_publication_date END,
-                            CASE WHEN rp.return_date_basis = 'invoice'
-                                 THEN bd.invoice_date END,
-                            r.receipt_date
-                        ) + rp.return_max_days THEN 'within_window'
+                        WHEN b.basis_date IS NULL THEN 'no_policy'
+                        WHEN CURRENT_DATE < b.basis_date + COALESCE(rp.return_min_days, 0) THEN 'too_early'
+                        WHEN CURRENT_DATE <= b.basis_date + rp.return_max_days THEN 'within_window'
                         ELSE 'expired'
                     END AS window_status,
                     r.company_id
@@ -129,10 +122,12 @@ class VendorReturnLine(models.Model):
                 JOIN product_template pt ON pt.id = pp.product_tmpl_id
                 LEFT JOIN bill_dates bd ON bd.purchase_line_id = r.purchase_line_id
                 LEFT JOIN res_partner rp ON rp.id = r.vendor_id
+                LEFT JOIN planned p ON p.source_move_id = r.move_id
+                JOIN basis_dates b ON b.move_id = r.move_id
                 WHERE GREATEST(0, LEAST(
                     r.receipt_qty,
                     s.on_hand_qty - (r.cumulative_from_newest - r.receipt_qty)
-                )) > 0
+                ) - COALESCE(p.planned_qty, 0)) > 0
             )
         """ % self._table)
 
