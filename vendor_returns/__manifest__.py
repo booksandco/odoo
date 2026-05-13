@@ -1,10 +1,11 @@
 {
     'name': 'Vendor Returns',
-    'version': '1.0.7',
+    'version': '1.0.8',
     'category': 'Inventory',
     'summary': 'Manage vendor return orders and return planning',
     'depends': [
         'account',
+        'bookstore',
         'mail',
         'purchase',
         'purchase_stock',
@@ -12,6 +13,7 @@
     ],
     'data': [
         'security/ir.model.access.csv',
+        'security/vendor_return_rules.xml',
         'data/vendor_return_sequence.xml',
         'views/vendor_return_views.xml',
         'views/vendor_return_order_views.xml',

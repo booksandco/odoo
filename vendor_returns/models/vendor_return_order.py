@@ -91,6 +91,9 @@ class VendorReturnOrder(models.Model):
         }
 
     def action_confirm(self):
+        for order in self:
+            if order.state != 'draft':
+                raise UserError(_("Only draft return orders can be confirmed."))
         self.write({'state': 'confirmed'})
 
     def action_generate_picks(self):
@@ -154,6 +157,7 @@ class VendorReturnOrder(models.Model):
                     'location_id': warehouse.lot_stock_id.id,
                     'location_dest_id': supplier_location.id,
                     'origin': order.name,
+                    'company_id': order.company_id.id,
                 })
                 for line in lines_without_source:
                     move = self.env['stock.move'].create({
@@ -165,6 +169,7 @@ class VendorReturnOrder(models.Model):
                         'location_dest_id': picking.location_dest_id.id,
                         'warehouse_id': warehouse.id,
                         'procure_method': 'make_to_stock',
+                        'company_id': order.company_id.id,
                     })
                     line.move_ids = [(4, move.id)]
                 picking.action_confirm()
@@ -200,11 +205,19 @@ class VendorReturnOrder(models.Model):
                     'name': line.product_id.display_name,
                     'quantity': line.product_qty,
                     'price_unit': line.price_unit,
+                    'product_uom_id': line.product_uom.id,
                 }) for line in lines],
             })
             inv_lines = invoice.invoice_line_ids.filtered(lambda l: not l.display_type)
-            for order_line, inv_line in zip(lines, inv_lines):
-                order_line.invoice_lines = [(4, inv_line.id)]
+            remaining_lines = list(lines)
+            for inv_line in inv_lines:
+                for idx, order_line in enumerate(remaining_lines):
+                    if (order_line.product_id == inv_line.product_id and
+                            order_line.product_qty == inv_line.quantity and
+                            order_line.price_unit == inv_line.price_unit):
+                        order_line.invoice_lines = [(4, inv_line.id)]
+                        remaining_lines.pop(idx)
+                        break
             invoices |= invoice
 
         if lines_no_bill:
@@ -217,11 +230,19 @@ class VendorReturnOrder(models.Model):
                     'name': line.product_id.display_name,
                     'quantity': line.product_qty,
                     'price_unit': line.price_unit,
+                    'product_uom_id': line.product_uom.id,
                 }) for line in lines_no_bill],
             })
             inv_lines = invoice.invoice_line_ids.filtered(lambda l: not l.display_type)
-            for order_line, inv_line in zip(lines_no_bill, inv_lines):
-                order_line.invoice_lines = [(4, inv_line.id)]
+            remaining_lines = list(lines_no_bill)
+            for inv_line in inv_lines:
+                for idx, order_line in enumerate(remaining_lines):
+                    if (order_line.product_id == inv_line.product_id and
+                            order_line.product_qty == inv_line.quantity and
+                            order_line.price_unit == inv_line.price_unit):
+                        order_line.invoice_lines = [(4, inv_line.id)]
+                        remaining_lines.pop(idx)
+                        break
             invoices |= invoice
 
         if len(invoices) == 1:
@@ -272,12 +293,16 @@ class VendorReturnOrder(models.Model):
 
     def action_cancel(self):
         for order in self:
-            active_picks = order.picking_ids.filtered(lambda p: p.state not in ('done', 'cancel'))
-            if active_picks:
-                raise UserError(_("Please cancel or complete all transfers before cancelling this return order."))
+            if order.picking_ids.filtered(lambda p: p.state == 'done'):
+                raise UserError(_("Cannot cancel a return order with completed transfers."))
+            if order.invoice_ids:
+                raise UserError(_("Cannot cancel a return order with existing credit notes."))
         self.write({'state': 'cancel'})
 
     def action_draft(self):
+        for order in self:
+            if order.state != 'cancel':
+                raise UserError(_("Only cancelled return orders can be set back to draft."))
         self.write({'state': 'draft'})
 
     def _remove_replenishment_rules(self):
@@ -316,8 +341,9 @@ class VendorReturnOrderLine(models.Model):
     product_qty = fields.Float(string='Quantity', default=1.0)
     product_uom = fields.Many2one('uom.uom', string='Unit of Measure', required=True)
     price_unit = fields.Float(string='Unit Price')
-    move_ids = fields.Many2many('stock.move', 'vendor_return_line_stock_move_rel', 'line_id', 'move_id')
-    invoice_lines = fields.Many2many('account.move.line', 'vendor_return_line_invoice_line_rel', 'line_id', 'invoice_line_id')
+    move_ids = fields.Many2many('stock.move', 'vendor_return_line_stock_move_rel', 'line_id', 'move_id', copy=False)
+    invoice_lines = fields.Many2many('account.move.line', 'vendor_return_line_invoice_line_rel', 'line_id', 'invoice_line_id', copy=False)
+    company_id = fields.Many2one('res.company', related='order_id.company_id', store=True)
     source_move_id = fields.Many2one('stock.move', string='Source Receipt', copy=False)
     source_purchase_line_id = fields.Many2one(
         'purchase.order.line', related='source_move_id.purchase_line_id',

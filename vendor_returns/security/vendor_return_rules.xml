@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="vendor_return_order_comp_rule" model="ir.rule">
+        <field name="name">Vendor Return Order Multi-Company Rule</field>
+        <field name="model_id" ref="model_vendor_return_order"/>
+        <field name="global" eval="True"/>
+        <field name="domain_force">['|',('company_id','=',False),('company_id','in',company_ids)]</field>
+    </record>
+
+    <record id="vendor_return_order_line_comp_rule" model="ir.rule">
+        <field name="name">Vendor Return Order Line Multi-Company Rule</field>
+        <field name="model_id" ref="model_vendor_return_order_line"/>
+        <field name="global" eval="True"/>
+        <field name="domain_force">['|',('company_id','=',False),('company_id','in',company_ids)]</field>
+    </record>
+</odoo>
