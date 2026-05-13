@@ -37,10 +37,10 @@
                     <t t-foreach="o.order_line" t-as="line">
                         <tr>
                             <td class="text-start">
-                                <span t-field="line.name"/>
+                                <span t-field="line.product_id.display_name"/>
                             </td>
                             <td class="text-start">
-                                <span t-field="line.vendor_invoice_ref"/>
+                                <span t-field="line.source_purchase_line_id.order_id.partner_ref"/>
                             </td>
                             <td class="text-end">
                                 <span t-field="line.product_qty"/>
