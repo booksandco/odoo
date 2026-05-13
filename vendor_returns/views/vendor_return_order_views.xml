@@ -65,6 +65,9 @@
                                     <field name="product_id"/>
                                     <field name="product_qty"/>
                                     <field name="product_uom"/>
+                                    <field name="price_unit"/>
+                                    <field name="source_move_id" optional="hide" readonly="1"/>
+                                    <field name="source_purchase_line_id" optional="hide" readonly="1"/>
                                 </list>
                             </field>
                         </page>

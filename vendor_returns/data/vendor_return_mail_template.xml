@@ -25,7 +25,6 @@
     </p>
 </div></field>
             <field name="report_template_ids" eval="[(4, ref('vendor_returns.action_report_vendor_return_order'))]"/>
-            <field name="auto_delete" eval="True"/>
         </record>
     </data>
 </odoo>

@@ -43,16 +43,22 @@
                                 <span t-field="line.source_purchase_line_id.order_id.partner_ref"/>
                             </td>
                             <td class="text-end">
-                                <span t-field="line.product_qty"/>
+                                <span t-field="line.product_qty" t-options="{'widget': 'float', 'precision': 2}"/>
                             </td>
                             <td class="text-end">
                                 <span t-field="line.product_uom"/>
                             </td>
                             <td class="text-end">
-                                <span t-field="line.price_unit"/>
+                                <span t-field="line.price_unit" t-options="{'widget': 'float', 'precision': 2}"/>
                             </td>
                         </tr>
                     </t>
+                    <tr class="border-top">
+                        <td colspan="2" class="text-end"><strong>Total</strong></td>
+                        <td class="text-end"><strong t-esc="round(sum(line.product_qty for line in o.order_line), 2)"/></td>
+                        <td/>
+                        <td class="text-end"><strong t-esc="round(sum(line.product_qty * line.price_unit for line in o.order_line), 2)"/></td>
+                    </tr>
                 </tbody>
             </table>
 

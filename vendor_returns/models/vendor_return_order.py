@@ -18,7 +18,7 @@ class VendorReturnOrder(models.Model):
         ('done', 'Done'),
         ('cancel', 'Cancelled'),
     ], default='draft', tracking=True)
-    partner_id = fields.Many2one('res.partner', string='Vendor', required=True, tracking=True, check_company=True)
+    partner_id = fields.Many2one('res.partner', string='Vendor', required=True, tracking=True, check_company=True, ondelete='restrict')
     date_order = fields.Datetime(string='Order Date', default=fields.Datetime.now)
     order_line = fields.One2many('vendor.return.order.line', 'order_id', string='Order Lines', copy=True)
     picking_ids = fields.Many2many(
@@ -33,7 +33,7 @@ class VendorReturnOrder(models.Model):
     warehouse_id = fields.Many2one(
         'stock.warehouse', string='Warehouse',
         default=lambda self: self.env['stock.warehouse'].search([('company_id', '=', self.env.company.id)], limit=1),
-        required=True, check_company=True,
+        required=True, check_company=True, ondelete='restrict',
     )
     company_id = fields.Many2one(
         'res.company', default=lambda self: self.env.company, required=True,
@@ -60,13 +60,12 @@ class VendorReturnOrder(models.Model):
 
     def action_send(self):
         self.ensure_one()
-        ir_model_data = self.env['ir.model.data']
         try:
-            template_id = ir_model_data._xmlid_lookup('vendor_returns.email_template_vendor_return')[1]
+            template_id = self.env.ref('vendor_returns.email_template_vendor_return').id
         except ValueError:
             template_id = False
         try:
-            compose_form_id = ir_model_data._xmlid_lookup('mail.email_compose_message_wizard_form')[1]
+            compose_form_id = self.env.ref('mail.email_compose_message_wizard_form').id
         except ValueError:
             compose_form_id = False
         ctx = dict(self.env.context or {})
