@@ -6,7 +6,7 @@ class StockWarehouseOrderpoint(models.Model):
 
     x_total_sales = fields.Float(
         compute='_compute_x_total_sales',
-        string='Total Sales',
+        string='Total Sold',
         digits='Product Unit',
     )
 
