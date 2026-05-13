@@ -30,6 +30,11 @@ class VendorReturnOrder(models.Model):
     )
     invoice_count = fields.Integer(compute='_compute_invoice_ids', store=True)
     note = fields.Html(string='Notes')
+    warehouse_id = fields.Many2one(
+        'stock.warehouse', string='Warehouse',
+        default=lambda self: self.env['stock.warehouse'].search([('company_id', '=', self.env.company.id)], limit=1),
+        required=True,
+    )
     company_id = fields.Many2one(
         'res.company', default=lambda self: self.env.company, required=True,
     )
@@ -103,39 +108,50 @@ class VendorReturnOrder(models.Model):
                 else:
                     lines_without_source |= line
 
+            # Lines with a source receipt: use Odoo's standard return wizard
+            # so that warehouse routes, move chaining and lot handling are
+            # applied exactly as for a normal picking return.
             for source_picking, lines in lines_by_picking.items():
-                return_type = source_picking.picking_type_id.return_picking_type_id
-                picking = self.env['stock.picking'].create({
-                    'picking_type_id': (return_type or source_picking.picking_type_id).id,
-                    'partner_id': order.partner_id.id,
-                    'location_id': source_picking.location_dest_id.id,
-                    'location_dest_id': source_picking.location_id.id,
-                    'origin': order.name,
-                })
-                for line in lines:
-                    move = self.env['stock.move'].create({
-                        'product_id': line.product_id.id,
-                        'product_uom_qty': line.product_qty,
-                        'product_uom': (line.product_uom or line.product_id.uom_id).id,
-                        'picking_id': picking.id,
-                        'location_id': picking.location_id.id,
-                        'location_dest_id': picking.location_dest_id.id,
-                        'origin_returned_move_id': line.source_move_id.id,
+                try:
+                    wizard = self.env['stock.return.picking'].create({
+                        'picking_id': source_picking.id,
                     })
-                    line.move_ids = [(4, move.id)]
-                picking.action_confirm()
-                picking.action_assign()
+                except UserError as e:
+                    raise UserError(_(
+                        "Cannot return picking %(picking)s: %(error)s"
+                    ) % {'picking': source_picking.name, 'error': str(e)}) from e
 
+                for wizard_line in wizard.product_return_moves:
+                    wizard_line.quantity = 0
+                for line in lines:
+                    wizard_line = wizard.product_return_moves.filtered(
+                        lambda wl: wl.move_id == line.source_move_id
+                    )
+                    if wizard_line:
+                        wizard_line.quantity = line.product_qty
+
+                return_picking = wizard._create_return()
+                for line in lines:
+                    return_move = return_picking.move_ids.filtered(
+                        lambda m: m.origin_returned_move_id == line.source_move_id
+                    )
+                    if return_move:
+                        line.move_ids = [(4, m.id) for m in return_move]
+
+            # Lines without a source receipt: create a simple outgoing picking
+            # from the warehouse stock location to the supplier.
             if lines_without_source:
-                warehouse = self.env['stock.warehouse'].search([
-                    ('company_id', '=', order.company_id.id),
-                ], limit=1)
+                warehouse = order.warehouse_id
+                if not warehouse:
+                    raise UserError(_(
+                        "Please set a warehouse on the return order before generating picks."
+                    ))
                 picking_type = warehouse.out_type_id
                 supplier_location = self.env.ref('stock.stock_location_suppliers')
                 picking = self.env['stock.picking'].create({
                     'picking_type_id': picking_type.id,
                     'partner_id': order.partner_id.id,
-                    'location_id': picking_type.default_location_src_id.id,
+                    'location_id': warehouse.lot_stock_id.id,
                     'location_dest_id': supplier_location.id,
                     'origin': order.name,
                 })
@@ -147,6 +163,8 @@ class VendorReturnOrder(models.Model):
                         'picking_id': picking.id,
                         'location_id': picking.location_id.id,
                         'location_dest_id': picking.location_dest_id.id,
+                        'warehouse_id': warehouse.id,
+                        'procure_method': 'make_to_stock',
                     })
                     line.move_ids = [(4, move.id)]
                 picking.action_confirm()
