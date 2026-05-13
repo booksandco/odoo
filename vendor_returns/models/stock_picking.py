@@ -17,7 +17,8 @@ class StockPicking(models.Model):
         ])
         for order in order_lines.order_id:
             if order.state == 'confirmed' and order.picking_ids and all(
-                p.state == 'done' for p in order.picking_ids
+                p.state in ('done', 'cancel') for p in order.picking_ids
             ):
-                order.state = 'done'
-                order._remove_replenishment_rules()
+                if any(p.state == 'done' for p in order.picking_ids):
+                    order.state = 'done'
+                    order._remove_replenishment_rules()

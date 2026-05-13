@@ -60,7 +60,6 @@ class VendorReturnOrder(models.Model):
 
     def action_send(self):
         self.ensure_one()
-        self.write({'state': 'sent'})
         ir_model_data = self.env['ir.model.data']
         try:
             template_id = ir_model_data._xmlid_lookup('vendor_returns.email_template_vendor_return')[1]
@@ -130,16 +129,22 @@ class VendorReturnOrder(models.Model):
                     wizard_line = wizard.product_return_moves.filtered(
                         lambda wl: wl.move_id == line.source_move_id
                     )
-                    if wizard_line:
-                        wizard_line.quantity = line.product_qty
+                    if not wizard_line:
+                        raise UserError(_(
+                            "Could not match product %(product)s in the return wizard for picking %(picking)s."
+                        ) % {'product': line.product_id.display_name, 'picking': source_picking.name})
+                    wizard_line.quantity = line.product_qty
 
                 return_picking = wizard._create_return()
                 for line in lines:
                     return_move = return_picking.move_ids.filtered(
                         lambda m: m.origin_returned_move_id == line.source_move_id
                     )
-                    if return_move:
-                        line.move_ids = [(4, m.id) for m in return_move]
+                    if not return_move:
+                        raise UserError(_(
+                            "Return move not created for product %(product)s."
+                        ) % {'product': line.product_id.display_name})
+                    line.move_ids = [(4, m.id) for m in return_move]
 
             # Lines without a source receipt: create a simple outgoing picking
             # from the warehouse stock location to the supplier.
@@ -175,8 +180,16 @@ class VendorReturnOrder(models.Model):
                 picking.action_confirm()
                 picking.action_assign()
 
+    def action_mark_sent(self):
+        for order in self:
+            if order.state != 'draft':
+                raise UserError(_("Only draft return orders can be marked as sent."))
+        self.write({'state': 'sent'})
+
     def action_create_invoice(self):
         self.ensure_one()
+        if not self.picking_ids.filtered(lambda p: p.state == 'done'):
+            raise UserError(_("Cannot create a credit note before stock has been returned."))
         if self.invoice_ids:
             raise UserError(_("A credit note already exists for this return order."))
 
@@ -200,6 +213,7 @@ class VendorReturnOrder(models.Model):
                 'reversed_entry_id': bill.id,
                 'ref': bill.ref,
                 'invoice_origin': self.name,
+                'currency_id': bill.currency_id.id,
                 'invoice_line_ids': [(0, 0, {
                     'product_id': line.product_id.id,
                     'name': line.product_id.display_name,
@@ -328,7 +342,7 @@ class VendorReturnOrder(models.Model):
                 order.message_post(
                     body=_("Replenishment rules removed for returned products: %s") % ', '.join(descriptions)
                 )
-                orderpoints.unlink()
+                orderpoints.write({'active': False})
 
 
 class VendorReturnOrderLine(models.Model):

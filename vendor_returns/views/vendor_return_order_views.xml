@@ -10,12 +10,15 @@
                 <header>
                     <button name="action_send" type="object" string="Send to Vendor"
                         class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_mark_sent" type="object" string="Mark as Sent"
+                        invisible="state != 'draft'"/>
                     <button name="action_confirm" type="object" string="Confirm"
                         class="btn-primary" invisible="state != 'sent'"/>
                     <button name="action_generate_picks" type="object" string="Generate Picks"
                         class="btn-primary" invisible="state != 'confirmed'"/>
                     <button name="action_create_invoice" type="object" string="Create Credit Note"
-                        invisible="state not in ('confirmed', 'done')"/>
+                        invisible="state not in ('confirmed', 'done')"
+                        groups="account.group_account_invoice"/>
                     <button name="action_cancel" type="object" string="Cancel"
                         invisible="state not in ('draft', 'sent', 'confirmed')"/>
                     <button name="action_draft" type="object" string="Reset to Draft"
