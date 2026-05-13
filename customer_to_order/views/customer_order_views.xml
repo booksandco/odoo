@@ -2,7 +2,7 @@
 <odoo>
     <record id="customer_order_view_tree" model="ir.ui.view">
         <field name="name">customer.order.tree</field>
-        <field name="model">customer.order</field>
+        <field name="model">bookstore.purchase.suggestion</field>
         <field name="arch" type="xml">
             <list decoration-success="status == 'available'"
                   decoration-info="status == 'on_order'"
@@ -30,7 +30,7 @@
 
     <record id="customer_order_view_search" model="ir.ui.view">
         <field name="name">customer.order.search</field>
-        <field name="model">customer.order</field>
+        <field name="model">bookstore.purchase.suggestion</field>
         <field name="arch" type="xml">
             <search>
                 <field name="product_tmpl_id" string="Product"/>
@@ -54,7 +54,7 @@
 
     <record id="action_customer_order" model="ir.actions.act_window">
         <field name="name">Customer Orders</field>
-        <field name="res_model">customer.order</field>
+        <field name="res_model">bookstore.purchase.suggestion</field>
         <field name="view_mode">list</field>
         <field name="search_view_id" ref="customer_order_view_search"/>
     </record>

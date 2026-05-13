@@ -8,7 +8,7 @@
         <field name="code">model._cron_refresh_book_data()</field>
         <field name="interval_number">10</field>
         <field name="interval_type">minutes</field>
-        <field name="active">True</field>
+        <field name="active">False</field>
     </record>
     </data>
 </odoo>

@@ -3,8 +3,8 @@ from odoo.exceptions import UserError
 
 
 class CustomerOrder(models.Model):
-    _name = 'customer.order'
-    _description = 'Customer Order'
+    _name = 'bookstore.purchase.suggestion'
+    _description = 'Purchase Suggestion'
     _auto = False
     _order = 'sale_order_id desc, id desc'
 
@@ -115,7 +115,7 @@ class CustomerOrder(models.Model):
             if not line.seller_id:
                 no_vendor |= line.product_id
             else:
-                vendor_lines.setdefault(line.seller_id, self.env['customer.order'])
+                vendor_lines.setdefault(line.seller_id, self.env['bookstore.purchase.suggestion'])
                 vendor_lines[line.seller_id] |= line
 
         if no_vendor:

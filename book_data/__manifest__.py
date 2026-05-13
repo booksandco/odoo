@@ -1,6 +1,6 @@
 {
     'name': 'Book Data',
-    'version': '1.11.2',
+    'version': '19.0.1.0.0',
     'category': 'Retail',
     'summary': 'Fetch book metadata from external APIs (Hardcover, Titlepage)',
     'description': """
@@ -12,14 +12,12 @@ Periodically updates book data via scheduled tasks to ensure information remains
         'bookstore',
     ],
     'data': [
-        'security/ir.model.access.csv',
-        'data/ir_model_fields.xml',
         'data/ir_cron.xml',
         'views/product_template_views.xml',
         'views/res_partner_views.xml',
         'views/res_config_settings_views.xml',
     ],
-    'post_init_hook': '_post_init_hook',
+
     'license': 'LGPL-3',
     'author': 'Harry Bird',
 }

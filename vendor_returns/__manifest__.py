@@ -1,11 +1,10 @@
 {
     'name': 'Vendor Returns',
-    'version': '1.0.11',
+    'version': '19.0.1.0.0',
     'category': 'Inventory',
     'summary': 'Manage vendor return orders and return planning',
     'depends': [
         'account',
-        'bookstore',
         'mail',
         'purchase',
         'purchase_stock',

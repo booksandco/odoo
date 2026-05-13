@@ -1,6 +1,6 @@
 {
     'name': 'Partner Mailing Auto-Subscribe',
-    'version': '1.0.0',
+    'version': '19.0.1.0.0',
     'category': 'Marketing',
     'summary': 'Auto-add new contacts to a mailing list',
     'depends': [

@@ -77,6 +77,18 @@ class ProductTemplate(models.Model):
         compute='_compute_data_score',
         store=True,
     )
+    x_data_score_display = fields.Char(
+        string='Data Score Display',
+        compute='_compute_x_data_score_display',
+    )
+    x_data_fetch_date = fields.Datetime(
+        string='Last Data Fetch',
+    )
+
+    @api.depends('x_data_score')
+    def _compute_x_data_score_display(self):
+        for rec in self:
+            rec.x_data_score_display = '%s/100' % rec.x_data_score
 
     @api.depends(*_DATA_SCORE_WEIGHTS)
     def _compute_data_score(self):

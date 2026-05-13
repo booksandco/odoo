@@ -4,12 +4,39 @@ from odoo import api, fields, models
 class ProductTemplate(models.Model):
     _inherit = 'product.template'
 
+    x_author = fields.Char(string="Author")
+    x_publisher = fields.Char(string="Publisher")
+    x_publication_date = fields.Date(string="Publication Date")
+    x_last_sale_date = fields.Date(
+        string="Last Sale",
+        compute='_compute_x_last_sale_date',
+        store=True,
+    )
+    x_last_vendor = fields.Many2one(
+        'res.partner',
+        string="Last Vendor",
+        related='seller_ids.partner_id',
+        readonly=True,
+    )
     x_is_isbn = fields.Boolean(compute='_compute_is_isbn')
 
     @api.depends('barcode')
     def _compute_is_isbn(self):
         for rec in self:
             rec.x_is_isbn = bool(rec.barcode and rec.barcode.startswith(('978', '979')))
+
+    @api.depends('product_variant_ids.stock_move_ids')
+    def _compute_x_last_sale_date(self):
+        for template in self:
+            if not template.product_variant_id:
+                template.x_last_sale_date = False
+                continue
+            moves = self.env['stock.move'].search([
+                ('product_id', '=', template.product_variant_id.id),
+                ('picking_type_id.code', '=', 'outgoing'),
+                ('state', '!=', 'cancel'),
+            ], order='date desc', limit=1)
+            template.x_last_sale_date = moves.date if moves else False
 
     @api.onchange('categ_id')
     def _onchange_categ_id_sync_public_category(self):

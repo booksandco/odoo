@@ -26,3 +26,14 @@ There is no local test runner. Testing requires a **commit and push** to the bra
 ## Version Bumps
 
 Every commit that modifies a module **must** bump the version number in that module's `__manifest__.py`. odoo.sh uses the version number to detect which modules need upgrading. If the version is not bumped, the changes will not be applied.
+
+### Version Format
+
+All modules use the format: **`19.0.MAJOR.MINOR.PATCH`**
+
+- `19.0` — Odoo version (fixed).
+- `MAJOR` — Breaking changes or significant new features.
+- `MINOR` — Small features, non-breaking enhancements.
+- `PATCH` — Bug fixes, typo corrections, or trivial adjustments.
+
+Bump at least the `MINOR` or `PATCH` segment for every commit that touches a module. Do not leave versions unchanged across commits.
