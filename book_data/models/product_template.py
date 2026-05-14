@@ -235,7 +235,7 @@ class ProductTemplate(models.Model):
         self.ensure_one()
         return {
             'type': 'ir.actions.act_url',
-            'url': f'https://hardcover.app/search?q={self.barcode}',
+            'url': f'https://hardcover.app/edition/isbn/{self.barcode}/book',
             'target': 'new',
         }
 
@@ -251,12 +251,16 @@ class ProductTemplate(models.Model):
             _logger.info("Cron: no ISBN products left to refresh")
             return
         _logger.info("Cron: refreshing book data for ISBN %s (score %s)", product.barcode, product.x_data_score)
+        original_list_price = product.list_price
         try:
             product.action_refresh_book_data()
         except UserError:
             _logger.info("Cron: no data found for ISBN %s", product.barcode)
         except Exception:
             _logger.exception("Cron: failed to refresh data for ISBN %s", product.barcode)
+        # Cron refreshes metadata only; never override manually-set pricing
+        if product.list_price != original_list_price:
+            product.list_price = original_list_price
         product.x_data_fetch_date = fields.Datetime.now()
 
     @api.model
@@ -412,12 +416,40 @@ class ProductTemplate(models.Model):
             for td in _findall(descriptive, 'TitleDetail'):
                 title_type = _find(td, 'TitleType')
                 if title_type is not None and title_type.text == '01':
-                    te = _find(td, 'TitleElement')
+                    # Prefer product-level TitleElement (level 01)
+                    te = None
+                    for candidate in _findall(td, 'TitleElement'):
+                        level = _find(candidate, 'TitleElementLevel')
+                        if level is not None and level.text == '01':
+                            te = candidate
+                            break
+                    if te is None:
+                        te = _find(td, 'TitleElement')
+
                     if te is not None:
                         title_text = _find(te, 'TitleText')
                         subtitle = _find(te, 'Subtitle')
+
+                        title_str = None
                         if title_text is not None and title_text.text:
-                            vals['name'] = title_text.text
+                            title_str = title_text.text
+                        else:
+                            # Fallback to TitlePrefix + TitleWithoutPrefix
+                            prefix = _find(te, 'TitlePrefix')
+                            without_prefix = _find(te, 'TitleWithoutPrefix')
+                            parts = []
+                            if prefix is not None and prefix.text:
+                                parts.append(prefix.text)
+                            if without_prefix is not None and without_prefix.text:
+                                parts.append(without_prefix.text)
+                            if parts:
+                                title_str = ' '.join(parts)
+
+                        if title_str and subtitle is not None and subtitle.text:
+                            title_str = f"{title_str}: {subtitle.text}"
+
+                        if title_str:
+                            vals['name'] = title_str
                     break
 
         # Author
