@@ -10,10 +10,25 @@ class ProductPublicCategory(models.Model):
         help="The number of products directly linked to this category",
     )
 
+    complete_name = fields.Char(
+        'Complete Name',
+        compute='_compute_complete_name',
+        recursive=True,
+        store=True,
+    )
+
     @api.depends('product_tmpl_ids')
     def _compute_product_count(self):
         for category in self:
             category.product_count = len(category.product_tmpl_ids)
+
+    @api.depends('name', 'parent_id.complete_name')
+    def _compute_complete_name(self):
+        for category in self:
+            if category.parent_id:
+                category.complete_name = '%s / %s' % (category.parent_id.complete_name, category.name)
+            else:
+                category.complete_name = category.name
 
     def action_view_products(self):
         self.ensure_one()

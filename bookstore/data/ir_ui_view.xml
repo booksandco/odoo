@@ -177,4 +177,14 @@
             </xpath>
         </field>
     </record>
+    <record id="product_public_category_tree_view_bookstore" model="ir.ui.view">
+        <field name="name">product.public.category.list.bookstore</field>
+        <field name="model">product.public.category</field>
+        <field name="inherit_id" ref="website_sale.product_public_category_tree_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='display_name']" position="replace">
+                <field name="complete_name"/>
+            </xpath>
+        </field>
+    </record>
 </odoo>
