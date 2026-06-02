@@ -29,12 +29,12 @@ class VendorReturnLine(models.Model):
         self.env.cr.execute("""
             CREATE OR REPLACE VIEW %s AS (
                 WITH stock AS (
-                    SELECT sq.product_id, sq.company_id, SUM(sq.available_quantity) AS on_hand_qty
+                    SELECT sq.product_id, sq.company_id, SUM(sq.quantity - sq.reserved_quantity) AS on_hand_qty
                     FROM stock_quant sq
                     JOIN stock_location sl ON sl.id = sq.location_id
                     WHERE sl.usage = 'internal'
                     GROUP BY sq.product_id, sq.company_id
-                    HAVING SUM(sq.available_quantity) > 0
+                    HAVING SUM(sq.quantity - sq.reserved_quantity) > 0
                 ),
                 receipts AS (
                     SELECT
