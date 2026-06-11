@@ -169,7 +169,7 @@ class VendorReturnOrder(models.Model):
                     move = self.env['stock.move'].create({
                         'product_id': line.product_id.id,
                         'product_uom_qty': line.product_qty,
-                        'product_uom': (line.product_uom or line.product_id.uom_id).id,
+                        'product_uom': line.product_uom.id,
                         'picking_id': picking.id,
                         'location_id': picking.location_id.id,
                         'location_dest_id': picking.location_dest_id.id,
