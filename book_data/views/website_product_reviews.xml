@@ -86,4 +86,15 @@
             </t>
         </xpath>
     </template>
+
+    <template id="website_sale_products_item_hardcover_rating" inherit_id="website_sale.products_item" name="Hardcover Rating on Product Card">
+        <xpath expr="//h2[@class='o_wsale_products_item_title text-break']" position="after">
+            <t t-if="product.x_hardcover_rating">
+                <div class="o_wsale_hardcover_rating text-muted small mb-1">
+                    <t t-esc="round(product.x_hardcover_rating * 10) / 10"/>
+                    <span>⭐</span>
+                </div>
+            </t>
+        </xpath>
+    </template>
 </odoo>
