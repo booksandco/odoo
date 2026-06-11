@@ -75,8 +75,10 @@
 
                         <!-- See More Button -->
                         <div class="mt-4 text-center">
-                            <a t-attf-href="https://hardcover.app/edition/isbn/#{product.barcode}/book" target="_blank" class="btn btn-outline-primary">
-                                See more on Hardcover <i class="fa fa-external-link ms-1"/>
+                            <a t-attf-href="https://hardcover.app/edition/isbn/#{product.barcode}/book" target="_blank" class="btn btn-outline-primary d-inline-flex align-items-center gap-2">
+                                <span>See more on</span>
+                                <img src="/book_data/static/src/img/hardcover_logo.png" alt="Hardcover" style="height:18px;"/>
+                                <i class="fa fa-external-link ms-1"/>
                             </a>
                         </div>
                     </section>
