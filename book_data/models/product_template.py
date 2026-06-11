@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 import math
 import xml.etree.ElementTree as ET
@@ -52,6 +53,32 @@ query GetBookByISBN($isbn: String!) {
 		}
 """
 
+HARDCOVER_REVIEWS_QUERY = """
+query GetBookReviewsByISBN($isbn: String!) {
+    editions(where: { isbn_13: { _eq: $isbn } }) {
+        book {
+            rating
+            ratings_count
+            reviews_count
+            slug
+            user_books(
+                where: { has_review: { _eq: true } }
+                limit: 5
+                order_by: { likes: desc }
+            ) {
+                review_raw
+                rating
+                reviewed_at
+                likes
+                user {
+                    username
+                }
+            }
+        }
+    }
+}
+"""
+
 
 _DATA_SCORE_WEIGHTS = {
     'name': 13,
@@ -83,6 +110,23 @@ class ProductTemplate(models.Model):
     )
     x_data_fetch_date = fields.Datetime(
         string='Last Data Fetch',
+    )
+    x_hardcover_rating = fields.Float(
+        string='Hardcover Rating',
+        help='Average rating from Hardcover (0-5)',
+    )
+    x_hardcover_ratings_count = fields.Integer(
+        string='Hardcover Ratings Count',
+    )
+    x_hardcover_reviews_count = fields.Integer(
+        string='Hardcover Reviews Count',
+    )
+    x_hardcover_reviews_json = fields.Text(
+        string='Hardcover Reviews (JSON)',
+        help='Top 5 reviews from Hardcover stored as JSON',
+    )
+    x_hardcover_reviews_fetch_date = fields.Datetime(
+        string='Hardcover Reviews Last Fetch',
     )
 
     @api.depends('x_data_score')
@@ -196,6 +240,15 @@ class ProductTemplate(models.Model):
                         sources.append('Hardcover')
             except Exception as e:
                 _logger.warning("Failed to fetch Hardcover data for ISBN %s: %s", self.barcode, e)
+
+            try:
+                reviews_data = self._hardcover_fetch_reviews(self.barcode, hardcover_key)
+                if reviews_data:
+                    review_vals = self._hardcover_parse_reviews(reviews_data)
+                    if review_vals:
+                        hardcover_vals.update(review_vals)
+            except Exception as e:
+                _logger.warning("Failed to fetch Hardcover reviews for ISBN %s: %s", self.barcode, e)
 
         titlepage_token = config.get_param('book_data.titlepage_api_token')
         if titlepage_token:
@@ -361,6 +414,92 @@ class ProductTemplate(models.Model):
         except requests.RequestException:
             _logger.warning("Failed to download image from %s", url)
             return None
+
+    @api.model
+    def _hardcover_fetch_reviews(self, isbn, api_key):
+        """Fetch review and rating data from Hardcover GraphQL API."""
+        isbn_clean = isbn.strip()
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {api_key}',
+        }
+        try:
+            _logger.debug("Querying Hardcover reviews API for ISBN: %s", isbn_clean)
+            response = requests.post(
+                HARDCOVER_API_URL,
+                json={'query': HARDCOVER_REVIEWS_QUERY, 'variables': {'isbn': isbn_clean}},
+                headers=headers,
+                timeout=10,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if 'errors' in data:
+                _logger.warning("Hardcover reviews API errors for ISBN %s: %s", isbn_clean, data['errors'])
+                return None
+
+            editions = data.get('data', {}).get('editions', [])
+            if not editions:
+                return None
+            return editions[0].get('book')
+        except requests.RequestException as e:
+            _logger.exception("Hardcover reviews API request failed for ISBN %s: %s", isbn_clean, str(e))
+            return None
+
+    def _hardcover_parse_reviews(self, book):
+        """Parse Hardcover book response into review field values."""
+        vals = {}
+        if not book:
+            return vals
+
+        rating = book.get('rating')
+        if rating is not None:
+            try:
+                vals['x_hardcover_rating'] = float(rating)
+            except (ValueError, TypeError):
+                pass
+
+        ratings_count = book.get('ratings_count')
+        if ratings_count is not None:
+            try:
+                vals['x_hardcover_ratings_count'] = int(ratings_count)
+            except (ValueError, TypeError):
+                pass
+
+        reviews_count = book.get('reviews_count')
+        if reviews_count is not None:
+            try:
+                vals['x_hardcover_reviews_count'] = int(reviews_count)
+            except (ValueError, TypeError):
+                pass
+
+        user_books = book.get('user_books') or []
+        reviews = []
+        for ub in user_books:
+            review_raw = ub.get('review_raw')
+            if not review_raw:
+                continue
+            user = ub.get('user') or {}
+            reviews.append({
+                'username': user.get('username') or 'Anonymous',
+                'rating': ub.get('rating'),
+                'reviewed_at': ub.get('reviewed_at'),
+                'likes': ub.get('likes') or 0,
+                'review_raw': review_raw,
+            })
+
+        if reviews:
+            vals['x_hardcover_reviews_json'] = json.dumps(reviews)
+
+        vals['x_hardcover_reviews_fetch_date'] = fields.Datetime.now()
+        return vals
+
+    def get_hardcover_reviews(self):
+        """Return parsed Hardcover reviews as a list of dicts."""
+        self.ensure_one()
+        if not self.x_hardcover_reviews_json:
+            return []
+        return json.loads(self.x_hardcover_reviews_json)
 
     # --- Titlepage (ONIX 3.1) ---
 

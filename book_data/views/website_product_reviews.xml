@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="website_product_reviews" inherit_id="website_sale.product" name="Hardcover Reviews">
+        <xpath expr="//div[@t-field='product.website_description']" position="after">
+            <t t-if="product.x_hardcover_rating or product.x_hardcover_reviews_json">
+                <div class="o_shop_hardcover_reviews border-top mt-4 pt-4" data-anchor="true">
+                    <section id="o_hardcover_reviews" class="container pb48">
+                        <h2 class="fs-4 mb-3">Hardcover Reviews</h2>
+
+                        <!-- Rating Summary -->
+                        <div class="d-flex align-items-center mb-3">
+                            <t t-call="portal_rating.rating_widget_stars_static">
+                                <t t-set="rating_avg" t-value="product.x_hardcover_rating or 0.0"/>
+                                <t t-set="rating_count" t-value="'%s ratings' % (product.x_hardcover_ratings_count or 0)"/>
+                            </t>
+                            <t t-if="product.x_hardcover_rating">
+                                <span class="ms-2 fw-bold" t-esc="round(product.x_hardcover_rating * 100) / 100"/>
+                                <span class="text-muted ms-1">/ 5</span>
+                            </t>
+                        </div>
+
+                        <!-- Top 5 Reviews -->
+                        <t t-set="reviews" t-value="product.get_hardcover_reviews()"/>
+                        <t t-if="reviews">
+                            <div class="row g-3">
+                                <t t-foreach="reviews" t-as="review">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px;font-size:14px;">
+                                                            <t t-esc="(review.get('username') or 'A')[0].upper()"/>
+                                                        </div>
+                                                        <span class="fw-bold" t-esc="review.get('username') or 'Anonymous'"/>
+                                                    </div>
+                                                    <t t-if="review.get('rating')">
+                                                        <t t-call="portal_rating.rating_widget_stars_static">
+                                                            <t t-set="rating_avg" t-value="review.get('rating')"/>
+                                                            <t t-set="rating_count" t-value="''"/>
+                                                        </t>
+                                                    </t>
+                                                </div>
+                                                <p class="card-text text-muted mb-1" t-esc="review.get('review_raw')"/>
+                                                <small class="text-muted">
+                                                    <t t-if="review.get('reviewed_at')">
+                                                        <t t-esc="review.get('reviewed_at')[:10]"/>
+                                                    </t>
+                                                    <t t-if="review.get('likes')">
+                                                        <span class="ms-2">
+                                                            <i class="fa fa-heart text-danger"/> <t t-esc="review.get('likes')"/>
+                                                        </span>
+                                                    </t>
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+
+                        <!-- See More Button -->
+                        <div class="mt-4 text-center">
+                            <a t-attf-href="https://hardcover.app/edition/isbn/#{product.barcode}/book" target="_blank" class="btn btn-outline-primary">
+                                See more on Hardcover <i class="fa fa-external-link ms-1"/>
+                            </a>
+                        </div>
+                    </section>
+                </div>
+            </t>
+        </xpath>
+    </template>
+</odoo>
