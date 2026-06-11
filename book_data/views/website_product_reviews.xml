@@ -46,9 +46,9 @@
                                                     <t t-if="review.get('reviewed_at')">
                                                         <t t-esc="review.get('reviewed_at')[:10]"/>
                                                     </t>
-                                                    <t t-if="review.get('likes')">
+                                                    <t t-if="review.get('likes_count')">
                                                         <span class="ms-2">
-                                                            <i class="fa fa-heart text-danger"/> <t t-esc="review.get('likes')"/>
+                                                            <i class="fa fa-heart text-danger"/> <t t-esc="review.get('likes_count')"/>
                                                         </span>
                                                     </t>
                                                 </small>

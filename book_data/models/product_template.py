@@ -64,12 +64,12 @@ query GetBookReviewsByISBN($isbn: String!) {
             user_books(
                 where: { has_review: { _eq: true } }
                 limit: 5
-                order_by: { likes: desc }
+                order_by: { likes_count: desc }
             ) {
                 review_raw
                 rating
                 reviewed_at
-                likes
+                likes_count
                 user {
                     username
                 }
@@ -191,6 +191,15 @@ class ProductTemplate(models.Model):
                         sources.append('Hardcover')
             except Exception as e:
                 _logger.warning("Failed to fetch Hardcover data for ISBN %s: %s", self.barcode, e)
+
+            try:
+                reviews_data = self._hardcover_fetch_reviews(self.barcode, hardcover_key)
+                if reviews_data:
+                    review_vals = self._hardcover_parse_reviews(reviews_data)
+                    if review_vals:
+                        all_vals.update(review_vals)
+            except Exception as e:
+                _logger.warning("Failed to fetch Hardcover reviews for ISBN %s: %s", self.barcode, e)
 
         # Try Titlepage
         titlepage_token = config.get_param('book_data.titlepage_api_token')
@@ -484,7 +493,7 @@ class ProductTemplate(models.Model):
                 'username': user.get('username') or 'Anonymous',
                 'rating': ub.get('rating'),
                 'reviewed_at': ub.get('reviewed_at'),
-                'likes': ub.get('likes') or 0,
+                'likes_count': ub.get('likes_count') or 0,
                 'review_raw': review_raw,
             })
 
