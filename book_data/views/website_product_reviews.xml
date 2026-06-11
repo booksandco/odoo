@@ -5,7 +5,10 @@
             <t t-if="product.x_hardcover_rating or product.x_hardcover_reviews_json">
                 <div class="o_shop_hardcover_reviews border-top mt-4 pt-4" data-anchor="true">
                     <section id="o_hardcover_reviews" class="container pb48">
-                        <h2 class="fs-4 mb-3">Hardcover Reviews</h2>
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <img src="/book_data/static/src/img/hardcover_logo.png" alt="Hardcover" style="height:28px;"/>
+                            <h2 class="fs-4 mb-0">Reviews</h2>
+                        </div>
 
                         <!-- Rating Summary -->
                         <div class="d-flex align-items-center mb-3">
@@ -35,10 +38,21 @@
                                                         <span class="fw-bold" t-esc="review.get('username') or 'Anonymous'"/>
                                                     </div>
                                                     <t t-if="review.get('rating')">
-                                                        <t t-call="portal_rating.rating_widget_stars_static">
-                                                            <t t-set="rating_avg" t-value="review.get('rating')"/>
-                                                            <t t-set="rating_count" t-value="''"/>
-                                                        </t>
+                                                        <t t-set="r_val" t-value="float(review.get('rating'))"/>
+                                                        <t t-set="r_int" t-value="int(r_val)"/>
+                                                        <t t-set="r_dec" t-value="round(r_val % 1, 1)"/>
+                                                        <t t-set="r_empty" t-value="5 - (r_int + 1) if r_dec else 5 - r_int"/>
+                                                        <div class="o_website_rating_static">
+                                                            <t t-foreach="range(0, r_int)" t-as="num">
+                                                                <i class="fa fa-star" role="img"/>
+                                                            </t>
+                                                            <t t-if="r_dec">
+                                                                <i class="fa fa-star-half-o" role="img"/>
+                                                            </t>
+                                                            <t t-foreach="range(0, r_empty)" t-as="num">
+                                                                <i class="fa fa-star-o" role="img"/>
+                                                            </t>
+                                                        </div>
                                                     </t>
                                                 </div>
                                                 <p class="card-text text-muted mb-1" t-esc="review.get('review_raw')"/>

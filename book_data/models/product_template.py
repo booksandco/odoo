@@ -71,7 +71,7 @@ query GetBookReviewsByISBN($isbn: String!) {
                 reviewed_at
                 likes_count
                 user {
-                    username
+                    name
                 }
             }
         }
@@ -490,7 +490,7 @@ class ProductTemplate(models.Model):
                 continue
             user = ub.get('user') or {}
             reviews.append({
-                'username': user.get('username') or 'Anonymous',
+                'username': user.get('name') or 'Anonymous',
                 'rating': ub.get('rating'),
                 'reviewed_at': ub.get('reviewed_at'),
                 'likes_count': ub.get('likes_count') or 0,
