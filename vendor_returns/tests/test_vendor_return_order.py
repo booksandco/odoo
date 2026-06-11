@@ -1,5 +1,5 @@
 from odoo.tests.common import TransactionCase
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 
 class TestVendorReturnOrder(TransactionCase):
@@ -115,3 +115,16 @@ class TestVendorReturnOrder(TransactionCase):
         for line in copy.order_line:
             self.assertFalse(line.move_ids)
             self.assertFalse(line.invoice_lines)
+
+    def test_order_line_requires_uom(self):
+        order = self.env['vendor.return.order'].create({
+            'partner_id': self.partner.id,
+            'warehouse_id': self.warehouse.id,
+        })
+        with self.assertRaises(ValidationError):
+            self.env['vendor.return.order.line'].create({
+                'order_id': order.id,
+                'product_id': self.product.id,
+                'product_qty': 1.0,
+                'price_unit': 10.0,
+            })
