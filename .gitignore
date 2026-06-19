@@ -1,0 +1,9 @@
+.gitignore
+BookScanDataFormatGuide.md
+AGENTS.md
+GEMINI.md
+.env
+odoo/
+__pycache__/
+*.pyc
+*.pyo
