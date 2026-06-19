@@ -119,6 +119,10 @@
                                     <div class="card-body p-2">
                                         <div t-field="edition.image_1920" t-options="{'widget': 'image', 'preview_image': 'image_256', 'class': 'card-img-top mb-2'}"/>
                                         <h6 class="card-title small mb-0" t-field="edition.name"/>
+                                        <div class="d-flex justify-content-between align-items-center mt-2 small">
+                                            <span class="fw-bold" t-field="edition.list_price"/>
+                                            <span class="text-muted" t-esc="'Stock: %s' % round(edition.free_qty)"/>
+                                        </div>
                                     </div>
                                 </div>
                             </a>
