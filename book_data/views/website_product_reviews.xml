@@ -87,7 +87,7 @@
         </xpath>
     </template>
 
-    <template id="website_product_meta" inherit_id="website_sale.product" name="Bookstore Product Meta">
+    <template id="website_product_meta" inherit_id="website_sale.product_title" name="Bookstore Product Meta">
         <xpath expr="//h1[@t-field='product.name']" position="after">
             <div class="o_bookstore_meta text-muted small mb-2">
                 <t t-if="product.author_line_ids">

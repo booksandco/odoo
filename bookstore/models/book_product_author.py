@@ -22,10 +22,7 @@ class BookProductAuthor(models.Model):
     )
     sequence = fields.Integer(string='Sequence', default=0)
 
-    _sql_constraints = [
-        (
-            'bookstore_product_author_uniq',
-            'unique(product_template_id, author_id)',
-            'An author can only be linked once per product.',
-        ),
-    ]
+    _product_author_uniq = models.Constraint(
+        'unique(product_template_id, author_id)',
+        'An author can only be linked once per product.',
+    )

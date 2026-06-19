@@ -10,10 +10,14 @@ class BookAuthor(models.Model):
     slug = fields.Char(string='Slug', required=True, index=True)
     hardcover_id = fields.Integer(string='Hardcover ID', index=True)
 
-    _sql_constraints = [
-        ('bookstore_author_slug_uniq', 'unique(slug)', 'Author slug must be unique.'),
-        ('bookstore_author_hardcover_id_uniq', 'unique(hardcover_id)', 'Hardcover ID must be unique.'),
-    ]
+    _slug_uniq = models.Constraint(
+        'unique(slug)',
+        'Author slug must be unique.',
+    )
+    _hardcover_id_uniq = models.Constraint(
+        'unique(hardcover_id)',
+        'Hardcover ID must be unique.',
+    )
 
     @api.model_create_multi
     def create(self, vals_list):

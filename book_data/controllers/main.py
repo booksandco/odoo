@@ -1,6 +1,6 @@
 from odoo import http
+from odoo.fields import Domain
 from odoo.http import request
-from odoo.osv import expression
 
 from odoo.addons.website_sale.controllers.main import SHOP_PATH, WebsiteSale
 
@@ -27,23 +27,23 @@ class BookDataWebsiteSale(WebsiteSale):
 
     def _render_entity_listing(self, entity_type, entity, page=0, search='', **post):
         website = request.env['website'].get_current_website()
-        domain = request.website.sale_product_domain()
+        domain = Domain(request.website.sale_product_domain())
 
         if entity_type == 'author':
-            domain += [('author_line_ids.author_id', '=', entity.id)]
+            domain &= Domain('author_line_ids.author_id', '=', entity.id)
             title = f'Books by {entity.name}'
         else:
-            domain += [('x_publisher_id', '=', entity.id)]
+            domain &= Domain('x_publisher_id', '=', entity.id)
             title = f'Books from {entity.name}'
 
         if search:
             for term in search.split():
-                term_domain = expression.OR([
-                    [('name', 'ilike', term)],
-                    [('x_author', 'ilike', term)],
-                    [('x_publisher', 'ilike', term)],
+                term_domain = Domain.OR([
+                    Domain('name', 'ilike', term),
+                    Domain('x_author', 'ilike', term),
+                    Domain('x_publisher', 'ilike', term),
                 ])
-                domain = expression.AND([domain, term_domain])
+                domain &= term_domain
 
         order = post.get('order') or website.shop_default_sort or 'website_sequence asc'
         ProductTemplate = request.env['product.template'].with_context(bin_size=True)
