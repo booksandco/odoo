@@ -61,6 +61,8 @@ def migrate(cr, version):
            OR (x_publisher IS NOT NULL AND x_publisher != '')
         """
     )
+    env.cr.execute("SELECT product_template_id, author_id FROM bookstore_product_author")
+    seen_product_authors = {tuple(row) for row in env.cr.fetchall()}
     product_author_values = []
     for product_id, authors_str, publisher_name in env.cr.fetchall():
         if publisher_name:
@@ -86,7 +88,8 @@ def migrate(cr, version):
                     continue
                 seen_norms.add(norm)
                 author = author_by_name.get(norm)
-                if author:
+                if author and (product_id, author.id) not in seen_product_authors:
+                    seen_product_authors.add((product_id, author.id))
                     product_author_values.append({
                         'product_template_id': product_id,
                         'author_id': author.id,
