@@ -105,7 +105,10 @@
                 </t>
             </div>
         </xpath>
-        <xpath expr="//div[@t-field='product.description_ecommerce']" position="after">
+    </template>
+
+    <template id="website_product_other_editions" inherit_id="website_sale.product" name="Bookstore Other Editions">
+        <xpath expr="//div[@id='o_wsale_cta_wrapper']" position="after">
             <div t-if="other_editions" class="o_bookstore_other_editions border-top mt-4 pt-3">
                 <h3 class="h5 mb-3">Other editions</h3>
                 <div class="row g-2">
