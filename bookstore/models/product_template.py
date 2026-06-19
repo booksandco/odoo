@@ -16,11 +16,18 @@ class ProductTemplate(models.Model):
         'bookstore.author',
         string='Authors',
         compute='_compute_author_ids',
+        inverse='_inverse_author_ids',
+        store=False,
     )
     x_publisher_id = fields.Many2one(
         'bookstore.publisher',
         string='Publisher Record',
     )
+
+    @api.onchange('x_publisher_id')
+    def _onchange_x_publisher_id(self):
+        for template in self:
+            template.x_publisher = template.x_publisher_id.name or False
 
     x_hardcover_book_id = fields.Integer(string='Hardcover Book ID')
     x_hardcover_edition_id = fields.Integer(string='Hardcover Edition ID')
@@ -49,6 +56,18 @@ class ProductTemplate(models.Model):
     def _compute_author_ids(self):
         for template in self:
             template.author_ids = template.author_line_ids.author_id
+
+    def _inverse_author_ids(self):
+        for template in self:
+            desired = template.author_ids
+            lines = [fields.Command.clear()]
+            for idx, author in enumerate(desired):
+                lines.append(fields.Command.create({
+                    'author_id': author.id,
+                    'sequence': idx,
+                }))
+            template.author_line_ids = lines
+            template.x_author = ', '.join(a.name for a in desired if a.name) or False
 
     def _sync_author_publisher_chars(self):
         """Keep the legacy Char fields in sync with the relation fields."""

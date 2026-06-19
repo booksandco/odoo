@@ -40,8 +40,8 @@ class BookDataWebsiteSale(WebsiteSale):
             for term in search.split():
                 term_domain = Domain.OR([
                     Domain('name', 'ilike', term),
-                    Domain('x_author', 'ilike', term),
-                    Domain('x_publisher', 'ilike', term),
+                    Domain('author_ids.name', 'ilike', term),
+                    Domain('x_publisher_id.name', 'ilike', term),
                 ])
                 domain &= term_domain
 

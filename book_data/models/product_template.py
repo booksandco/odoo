@@ -687,14 +687,21 @@ class ProductTemplate(models.Model):
                 vals['x_author'] = ', '.join(authors)
 
         # Publisher (prefer imprint over publisher)
-        if publishing is not None and (force or not self.x_publisher):
+        if publishing is not None and (force or not self.x_publisher_id):
+            publisher_name = None
             imprint_el = _find(publishing, 'Imprint/ImprintName')
             if imprint_el is not None and imprint_el.text:
-                vals['x_publisher'] = imprint_el.text
+                publisher_name = imprint_el.text
             else:
                 publisher_el = _find(publishing, 'Publisher/PublisherName')
                 if publisher_el is not None and publisher_el.text:
-                    vals['x_publisher'] = publisher_el.text
+                    publisher_name = publisher_el.text
+            if publisher_name:
+                vals['x_publisher'] = publisher_name
+                publisher_rec = self.env['bookstore.publisher']._hardcover_get_or_create(
+                    publisher_name, False,
+                )
+                vals['x_publisher_id'] = publisher_rec.id
 
         # Publication date (role 01 = publication date)
         if publishing is not None and (force or not self.x_publication_date):
