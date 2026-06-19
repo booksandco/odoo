@@ -17,7 +17,7 @@ class ProductTemplate(models.Model):
         string='Authors',
         compute='_compute_author_ids',
         inverse='_inverse_author_ids',
-        store=False,
+        store=True,
     )
     x_publisher_id = fields.Many2one(
         'bookstore.publisher',
