@@ -19,7 +19,8 @@
                 <div t-if="product.author_line_ids or product.x_publisher_id or product.x_author or product.x_publisher" class="o_wsale_product_author_publisher small text-muted mt-1">
                     <t t-if="product.author_line_ids">
                         <t t-foreach="product.author_line_ids.sorted('sequence')" t-as="line">
-                            <a t-attf-href="/shop/author/{{request.env['ir.http']._slug(line.author_id)}" class="text-muted" t-field="line.author_id.name"/>
+                            <t t-set="author_slug" t-value="request.env['ir.http']._slug(line.author_id)"/>
+                            <a t-att-href="'/shop/author/%s' % author_slug" class="text-muted" t-field="line.author_id.name"/>
                             <t t-if="not line_last">, </t>
                         </t>
                     </t>
@@ -28,7 +29,8 @@
                     </t>
                     <t t-if="product.x_publisher_id">
                         <t t-if="product.author_line_ids or product.x_author"> · </t>
-                        <a t-attf-href="/shop/publisher/{{request.env['ir.http']._slug(product.x_publisher_id)}" class="text-muted" t-field="product.x_publisher_id.name"/>
+                        <t t-set="publisher_slug" t-value="request.env['ir.http']._slug(product.x_publisher_id)"/>
+                        <a t-att-href="'/shop/publisher/%s' % publisher_slug" class="text-muted" t-field="product.x_publisher_id.name"/>
                     </t>
                     <t t-elif="product.x_publisher">
                         <t t-if="product.x_author"> · </t>
