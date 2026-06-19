@@ -6,6 +6,26 @@ class ProductTemplate(models.Model):
 
     x_author = fields.Char(string="Author")
     x_publisher = fields.Char(string="Publisher")
+
+    author_line_ids = fields.One2many(
+        'bookstore.product_author',
+        'product_template_id',
+        string='Author Links',
+    )
+    author_ids = fields.Many2many(
+        'bookstore.author',
+        string='Authors',
+        compute='_compute_author_ids',
+    )
+    x_publisher_id = fields.Many2one(
+        'bookstore.publisher',
+        string='Publisher Record',
+    )
+
+    x_hardcover_book_id = fields.Integer(string='Hardcover Book ID')
+    x_hardcover_edition_id = fields.Integer(string='Hardcover Edition ID')
+    x_hardcover_editions_json = fields.Text(string='Hardcover Editions JSON')
+
     x_publication_date = fields.Date(string="Publication Date")
     x_last_sale_date = fields.Date(
         string="Last Sale",
@@ -24,6 +44,22 @@ class ProductTemplate(models.Model):
     def _compute_is_isbn(self):
         for rec in self:
             rec.x_is_isbn = bool(rec.barcode and rec.barcode.startswith(('978', '979')))
+
+    @api.depends('author_line_ids.author_id')
+    def _compute_author_ids(self):
+        for template in self:
+            template.author_ids = template.author_line_ids.author_id
+
+    def _sync_author_publisher_chars(self):
+        """Keep the legacy Char fields in sync with the relation fields."""
+        for template in self:
+            author_names = [
+                line.author_id.name
+                for line in template.author_line_ids.sorted('sequence')
+                if line.author_id.name
+            ]
+            template.x_author = ', '.join(author_names) if author_names else False
+            template.x_publisher = template.x_publisher_id.name or False
 
     @api.depends('product_variant_ids.stock_move_ids')
     def _compute_x_last_sale_date(self):

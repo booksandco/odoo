@@ -27,7 +27,14 @@
                 <field name="x_is_isbn" invisible="1"/>
                 <xpath expr="//field[@name='barcode']" position="move"/>
                 <field name="x_author" invisible="not x_is_isbn"/>
+                <field name="author_line_ids" invisible="not x_is_isbn">
+                    <list editable="bottom">
+                        <field name="author_id"/>
+                        <field name="sequence"/>
+                    </list>
+                </field>
                 <field name="x_publisher" invisible="not x_is_isbn"/>
+                <field name="x_publisher_id" invisible="not x_is_isbn" options="{'no_create': False}"/>
                 <field name="x_publication_date" invisible="not x_is_isbn"/>
                 <xpath expr="//field[@name='categ_id']" position="move"/>
             </xpath>

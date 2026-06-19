@@ -19,6 +19,7 @@ HARDCOVER_API_URL = 'https://api.hardcover.app/v1/graphql'
 HARDCOVER_EDITION_QUERY = """
 query GetBookByISBN($isbn: String!) {
 			editions(where: { isbn_13: { _eq: $isbn } }) {
+				id
 				isbn_13
 				isbn_10
 				title
@@ -29,6 +30,7 @@ query GetBookByISBN($isbn: String!) {
 				edition_information
 				cached_image
 				publisher {
+					id
 					name
 				}
 				language {
@@ -38,6 +40,7 @@ query GetBookByISBN($isbn: String!) {
 					name
 				}
 				book {
+					id
 					title
 					description
 					cached_image
@@ -45,6 +48,7 @@ query GetBookByISBN($isbn: String!) {
 					contributions {
 						contribution
 						author {
+							id
 							name
 						}
 					}
@@ -381,16 +385,53 @@ class ProductTemplate(models.Model):
 
         # Author - contributions are in the book
         contributions = book.get('contributions') or []
-        authors = [c['author']['name'] for c in contributions if c.get('author', {}).get('name')]
-        if authors and (force or not self.x_author):
-            vals['x_author'] = ', '.join(authors)
+        author_records = []
+        author_names = []
+        for contribution in contributions:
+            author = contribution.get('author') or {}
+            author_name = author.get('name')
+            if not author_name:
+                continue
+            author_hc_id = author.get('id')
+            if isinstance(author_hc_id, str):
+                try:
+                    author_hc_id = int(author_hc_id)
+                except ValueError:
+                    author_hc_id = False
+            author_rec = self.env['bookstore.author']._hardcover_get_or_create(
+                author_name, author_hc_id or False,
+            )
+            author_records.append(author_rec)
+            author_names.append(author_name)
+
+        if author_records and (force or not self.x_author):
+            vals['x_author'] = ', '.join(author_names)
+            vals['author_line_ids'] = [
+                fields.Command.clear(),
+            ] + [
+                fields.Command.create({
+                    'author_id': author.id,
+                    'sequence': idx,
+                })
+                for idx, author in enumerate(author_records)
+            ]
 
         # Publisher - now at edition level
         publisher = edition.get('publisher')
         if publisher and isinstance(publisher, dict):
             publisher_name = publisher.get('name')
+            publisher_hc_id = publisher.get('id')
+            if isinstance(publisher_hc_id, str):
+                try:
+                    publisher_hc_id = int(publisher_hc_id)
+                except ValueError:
+                    publisher_hc_id = False
             if publisher_name and (force or not self.x_publisher):
+                publisher_rec = self.env['bookstore.publisher']._hardcover_get_or_create(
+                    publisher_name, publisher_hc_id or False,
+                )
                 vals['x_publisher'] = publisher_name
+                vals['x_publisher_id'] = publisher_rec.id
 
         # Publication date
         release_date = edition.get('release_date')
@@ -410,6 +451,25 @@ class ProductTemplate(models.Model):
             image_data = self._hardcover_download_image(image_url)
             if image_data:
                 vals['image_1920'] = image_data
+
+        # Hardcover IDs for book/edition grouping
+        edition_id = edition.get('id')
+        if isinstance(edition_id, str):
+            try:
+                edition_id = int(edition_id)
+            except ValueError:
+                edition_id = False
+        if edition_id and (force or not self.x_hardcover_edition_id):
+            vals['x_hardcover_edition_id'] = edition_id
+
+        book_id = book.get('id')
+        if isinstance(book_id, str):
+            try:
+                book_id = int(book_id)
+            except ValueError:
+                book_id = False
+        if book_id and (force or not self.x_hardcover_book_id):
+            vals['x_hardcover_book_id'] = book_id
 
         return vals
 

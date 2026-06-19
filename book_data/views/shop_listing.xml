@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="shop_listing" name="Bookstore Listing">
+        <t t-call="website.layout">
+            <t t-set="additional_title" t-value="title"/>
+            <div id="wrap" class="js_sale o_wsale_products_page">
+                <div class="oe_website_sale container o_wsale_page_contained">
+                    <div class="row">
+                        <div class="col-12">
+                            <h1 class="mt-4 mb-4" t-out="title"/>
+                            <p t-if="search" class="text-muted">
+                                Search results for "<t t-out="search"/>"
+                            </p>
+                        </div>
+                    </div>
+                    <div t-if="products" class="row g-3">
+                        <t t-foreach="products" t-as="product">
+                            <div class="col-6 col-md-4 col-lg-3">
+                                <t t-set="product_variant" t-value="product_variants[product]"/>
+                                <t t-set="product_href" t-value="product._get_product_url()"/>
+                                <t t-call="website_sale.products_item">
+                                    <t t-set="show_variations" t-value="False"/>
+                                    <t t-set="show_ribbons" t-value="False"/>
+                                </t>
+                            </div>
+                        </t>
+                    </div>
+                    <div t-else="" class="text-center text-muted mt128 mb256">
+                        <h3>No results</h3>
+                    </div>
+                    <div class="products_pager d-flex justify-content-center py-4" t-if="pager.page_count > 1">
+                        <t t-call="website.pager"/>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

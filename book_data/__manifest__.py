@@ -1,6 +1,6 @@
 {
     'name': 'Book Data',
-    'version': '19.0.1.1.2',
+    'version': '19.0.1.2.0',
     'category': 'Retail',
     'summary': 'Fetch book metadata and reviews from external APIs (Hardcover, Titlepage)',
     'description': """
@@ -16,6 +16,7 @@ Periodically updates book data via scheduled tasks to ensure information remains
     'data': [
         'data/ir_cron.xml',
         'views/product_template_views.xml',
+        'views/shop_listing.xml',
         'views/website_product_reviews.xml',
         'views/res_partner_views.xml',
         'views/res_config_settings_views.xml',
