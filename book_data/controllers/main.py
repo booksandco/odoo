@@ -100,14 +100,13 @@ class BookDataWebsiteSale(WebsiteSale):
     def _prepare_product_values(self, product, category, **kwargs):
         values = super()._prepare_product_values(product, category, **kwargs)
         if product.x_hardcover_book_id:
-            domain = request.website.sale_product_domain() + [
+            domain = Domain(request.website.sale_product_domain()) & Domain(
                 ('x_hardcover_book_id', '=', product.x_hardcover_book_id),
                 ('id', '!=', product.id),
-            ]
-            other_editions = request.env['product.template'].with_context(bin_size=True).search(domain)
-            other_editions = other_editions.filtered(
-                lambda p: any(v.sudo().free_qty > 0 for v in p.product_variant_ids)
             )
+            other_editions = request.env['product.template'].with_context(
+                bin_size=True
+            ).search(domain)
         else:
             other_editions = request.env['product.template']
         values['other_editions'] = other_editions
