@@ -103,6 +103,14 @@
                     <t t-set="publisher_slug" t-value="request.env['ir.http']._slug(product.x_publisher_id)"/>
                     <a t-att-href="'/shop/publisher/%s' % publisher_slug" t-field="product.x_publisher_id.name"/>
                 </t>
+                <t t-if="product.x_is_isbn">
+                    <t t-if="product.author_line_ids or product.x_publisher_id"> · </t>
+                    ISBN <span t-esc="product.barcode"/>
+                </t>
+                <t t-if="product.x_publication_date">
+                    <t t-if="product.author_line_ids or product.x_publisher_id or product.x_is_isbn"> · </t>
+                    <span t-field="product.x_publication_date"/>
+                </t>
             </div>
         </xpath>
     </template>
