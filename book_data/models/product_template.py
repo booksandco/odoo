@@ -232,56 +232,136 @@ class ProductTemplate(models.Model):
         if all_vals:
             self.update(all_vals)
 
+    def _refresh_hardcover_data(self, force=True):
+        """Fetch and parse Hardcover edition + reviews. Returns (vals, sources)."""
+        self.ensure_one()
+        vals = {}
+        sources = []
+        config = self.env['ir.config_parameter'].sudo()
+        hardcover_key = config.get_param('book_data.hardcover_api_key')
+        if not hardcover_key:
+            return vals, sources
+
+        try:
+            edition = self._hardcover_fetch_edition(self.barcode, hardcover_key)
+            if edition:
+                parsed = self._hardcover_parse_edition(edition, force=force)
+                if parsed:
+                    vals.update(parsed)
+                    sources.append('Hardcover')
+        except Exception as e:
+            _logger.warning("Failed to fetch Hardcover data for ISBN %s: %s", self.barcode, e)
+
+        try:
+            reviews_data = self._hardcover_fetch_reviews(self.barcode, hardcover_key)
+            if reviews_data:
+                review_vals = self._hardcover_parse_reviews(reviews_data)
+                if review_vals:
+                    vals.update(review_vals)
+        except Exception as e:
+            _logger.warning("Failed to fetch Hardcover reviews for ISBN %s: %s", self.barcode, e)
+
+        return vals, sources
+
+    def _refresh_titlepage_data(self, force=True):
+        """Fetch and parse Titlepage ONIX data. Returns (vals, sources)."""
+        self.ensure_one()
+        vals = {}
+        sources = []
+        config = self.env['ir.config_parameter'].sudo()
+        titlepage_token = config.get_param('book_data.titlepage_api_token')
+        if not titlepage_token:
+            return vals, sources
+
+        try:
+            product_xml = self._titlepage_fetch_product(self.barcode, titlepage_token)
+            if product_xml is not None:
+                parsed = self._titlepage_parse_product(product_xml, force=force)
+                if parsed:
+                    vals.update(parsed)
+                    sources.append('Titlepage')
+        except Exception:
+            _logger.exception("Failed to fetch Titlepage data for ISBN %s", self.barcode)
+
+        return vals, sources
+
+    def action_refresh_hardcover_data(self):
+        """Button action to refresh Hardcover data only, overwriting existing values."""
+        self.ensure_one()
+        if not self.barcode or not self.barcode.startswith(('978', '979')):
+            raise UserError(_('A valid ISBN barcode (starting with 978 or 979) is required to fetch book data.'))
+
+        config = self.env['ir.config_parameter'].sudo()
+        if not config.get_param('book_data.hardcover_api_key'):
+            raise UserError(_('Configure Hardcover API key in Settings > Inventory > Barcode.'))
+
+        vals, sources = self._refresh_hardcover_data(force=True)
+        if vals:
+            self.write(vals)
+
+        if sources:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Book Data Refreshed'),
+                    'message': _('Updated from %s: %s') % (', '.join(sources), ', '.join(vals.keys())),
+                    'type': 'success',
+                    'sticky': False,
+                },
+            }
+
+        raise UserError(_('No Hardcover data found for ISBN %s.') % self.barcode)
+
+    def action_refresh_titlepage_data(self):
+        """Button action to refresh Titlepage data only, overwriting existing values."""
+        self.ensure_one()
+        if not self.barcode or not self.barcode.startswith(('978', '979')):
+            raise UserError(_('A valid ISBN barcode (starting with 978 or 979) is required to fetch book data.'))
+
+        config = self.env['ir.config_parameter'].sudo()
+        if not config.get_param('book_data.titlepage_api_token'):
+            raise UserError(_('Configure Titlepage API token in Settings > Inventory > Barcode.'))
+
+        vals, sources = self._refresh_titlepage_data(force=True)
+        if vals:
+            self.write(vals)
+
+        if sources:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Book Data Refreshed'),
+                    'message': _('Updated from %s: %s') % (', '.join(sources), ', '.join(vals.keys())),
+                    'type': 'success',
+                    'sticky': False,
+                },
+            }
+
+        raise UserError(_('No Titlepage data found for ISBN %s.') % self.barcode)
+
     def action_refresh_book_data(self):
         """Button action to refresh book data from external APIs, overwriting existing values."""
         self.ensure_one()
         if not self.barcode or not self.barcode.startswith(('978', '979')):
             raise UserError(_('A valid ISBN barcode (starting with 978 or 979) is required to fetch book data.'))
 
-        hardcover_vals = {}
-        titlepage_vals = {}
-        sources = []
         config = self.env['ir.config_parameter'].sudo()
-
         hardcover_key = config.get_param('book_data.hardcover_api_key')
-        if hardcover_key:
-            try:
-                edition = self._hardcover_fetch_edition(self.barcode, hardcover_key)
-                if edition:
-                    hardcover_vals = self._hardcover_parse_edition(edition, force=True)
-                    if hardcover_vals:
-                        sources.append('Hardcover')
-            except Exception as e:
-                _logger.warning("Failed to fetch Hardcover data for ISBN %s: %s", self.barcode, e)
-
-            try:
-                reviews_data = self._hardcover_fetch_reviews(self.barcode, hardcover_key)
-                if reviews_data:
-                    review_vals = self._hardcover_parse_reviews(reviews_data)
-                    if review_vals:
-                        hardcover_vals.update(review_vals)
-            except Exception as e:
-                _logger.warning("Failed to fetch Hardcover reviews for ISBN %s: %s", self.barcode, e)
-
         titlepage_token = config.get_param('book_data.titlepage_api_token')
-        if titlepage_token:
-            try:
-                product_xml = self._titlepage_fetch_product(self.barcode, titlepage_token)
-                if product_xml is not None:
-                    titlepage_vals = self._titlepage_parse_product(product_xml, force=True)
-                    if titlepage_vals:
-                        sources.append('Titlepage')
-            except Exception:
-                _logger.exception("Failed to fetch Titlepage data for ISBN %s", self.barcode)
-
         if not hardcover_key and not titlepage_token:
             raise UserError(_('Configure API keys in Settings > Inventory > Barcode to auto-fetch book data.'))
+
+        hardcover_vals, hardcover_sources = self._refresh_hardcover_data(force=True)
+        titlepage_vals, titlepage_sources = self._refresh_titlepage_data(force=True)
 
         # Titlepage as base, Hardcover overwrites (Hardcover takes priority)
         all_vals = {**titlepage_vals, **hardcover_vals}
         if all_vals:
             self.write(all_vals)
 
+        sources = titlepage_sources + hardcover_sources
         if sources:
             return {
                 'type': 'ir.actions.client',
