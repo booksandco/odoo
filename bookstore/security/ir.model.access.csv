@@ -1,0 +1,10 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_bookstore_author_user,Bookstore Author User,model_bookstore_author,base.group_user,1,1,1,1
+access_bookstore_author_public,Bookstore Author Public,model_bookstore_author,base.group_public,1,0,0,0
+access_bookstore_author_portal,Bookstore Author Portal,model_bookstore_author,base.group_portal,1,0,0,0
+access_bookstore_publisher_user,Bookstore Publisher User,model_bookstore_publisher,base.group_user,1,1,1,1
+access_bookstore_publisher_public,Bookstore Publisher Public,model_bookstore_publisher,base.group_public,1,0,0,0
+access_bookstore_publisher_portal,Bookstore Publisher Portal,model_bookstore_publisher,base.group_portal,1,0,0,0
+access_bookstore_product_author_user,Bookstore Product Author User,model_bookstore_product_author,base.group_user,1,1,1,1
+access_bookstore_product_author_public,Bookstore Product Author Public,model_bookstore_product_author,base.group_public,1,0,0,0
+access_bookstore_product_author_portal,Bookstore Product Author Portal,model_bookstore_product_author,base.group_portal,1,0,0,0

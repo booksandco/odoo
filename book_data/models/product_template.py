@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 import math
 import xml.etree.ElementTree as ET
@@ -18,6 +19,7 @@ HARDCOVER_API_URL = 'https://api.hardcover.app/v1/graphql'
 HARDCOVER_EDITION_QUERY = """
 query GetBookByISBN($isbn: String!) {
 			editions(where: { isbn_13: { _eq: $isbn } }) {
+				id
 				isbn_13
 				isbn_10
 				title
@@ -28,6 +30,7 @@ query GetBookByISBN($isbn: String!) {
 				edition_information
 				cached_image
 				publisher {
+					id
 					name
 				}
 				language {
@@ -37,6 +40,7 @@ query GetBookByISBN($isbn: String!) {
 					name
 				}
 				book {
+					id
 					title
 					description
 					cached_image
@@ -44,12 +48,39 @@ query GetBookByISBN($isbn: String!) {
 					contributions {
 						contribution
 						author {
+							id
 							name
 						}
 					}
 				}
 			}
 		}
+"""
+
+HARDCOVER_REVIEWS_QUERY = """
+query GetBookReviewsByISBN($isbn: String!) {
+    editions(where: { isbn_13: { _eq: $isbn } }) {
+        book {
+            rating
+            ratings_count
+            reviews_count
+            slug
+            user_books(
+                where: { has_review: { _eq: true } }
+                limit: 5
+                order_by: { likes_count: desc }
+            ) {
+                review_raw
+                rating
+                reviewed_at
+                likes_count
+                user {
+                    name
+                }
+            }
+        }
+    }
+}
 """
 
 
@@ -66,6 +97,10 @@ _DATA_SCORE_WEIGHTS = {
     'seller_ids': 5,
     'categ_id': 4,
     'x_publication_date': 4,
+    'x_hardcover_rating': 3,
+    'x_hardcover_reviews_json': 3,
+    'x_hardcover_book_id': 2,
+    'x_hardcover_edition_id': 2,
 }
 
 
@@ -84,11 +119,29 @@ class ProductTemplate(models.Model):
     x_data_fetch_date = fields.Datetime(
         string='Last Data Fetch',
     )
+    x_hardcover_rating = fields.Float(
+        string='Hardcover Rating',
+        help='Average rating from Hardcover (0-5)',
+    )
+    x_hardcover_ratings_count = fields.Integer(
+        string='Hardcover Ratings Count',
+    )
+    x_hardcover_reviews_count = fields.Integer(
+        string='Hardcover Reviews Count',
+    )
+    x_hardcover_reviews_json = fields.Text(
+        string='Hardcover Reviews (JSON)',
+        help='Top 5 reviews from Hardcover stored as JSON',
+    )
+    x_hardcover_reviews_fetch_date = fields.Datetime(
+        string='Hardcover Reviews Last Fetch',
+    )
 
     @api.depends('x_data_score')
     def _compute_x_data_score_display(self):
+        max_score = sum(_DATA_SCORE_WEIGHTS.values())
         for rec in self:
-            rec.x_data_score_display = '%s/100' % rec.x_data_score
+            rec.x_data_score_display = '%s/%s' % (rec.x_data_score, max_score)
 
     @api.depends(*_DATA_SCORE_WEIGHTS)
     def _compute_data_score(self):
@@ -119,6 +172,14 @@ class ProductTemplate(models.Model):
                 score += _DATA_SCORE_WEIGHTS['description_ecommerce']
             if rec.weight:
                 score += _DATA_SCORE_WEIGHTS['weight']
+            if rec.x_hardcover_rating:
+                score += _DATA_SCORE_WEIGHTS['x_hardcover_rating']
+            if rec.x_hardcover_reviews_json:
+                score += _DATA_SCORE_WEIGHTS['x_hardcover_reviews_json']
+            if rec.x_hardcover_book_id:
+                score += _DATA_SCORE_WEIGHTS['x_hardcover_book_id']
+            if rec.x_hardcover_edition_id:
+                score += _DATA_SCORE_WEIGHTS['x_hardcover_edition_id']
             rec.x_data_score = score
 
     @api.onchange('barcode')
@@ -148,6 +209,15 @@ class ProductTemplate(models.Model):
             except Exception as e:
                 _logger.warning("Failed to fetch Hardcover data for ISBN %s: %s", self.barcode, e)
 
+            try:
+                reviews_data = self._hardcover_fetch_reviews(self.barcode, hardcover_key)
+                if reviews_data:
+                    review_vals = self._hardcover_parse_reviews(reviews_data)
+                    if review_vals:
+                        all_vals.update(review_vals)
+            except Exception as e:
+                _logger.warning("Failed to fetch Hardcover reviews for ISBN %s: %s", self.barcode, e)
+
         # Try Titlepage
         titlepage_token = config.get_param('book_data.titlepage_api_token')
         if titlepage_token:
@@ -175,47 +245,136 @@ class ProductTemplate(models.Model):
         if all_vals:
             self.update(all_vals)
 
+    def _refresh_hardcover_data(self, force=True):
+        """Fetch and parse Hardcover edition + reviews. Returns (vals, sources)."""
+        self.ensure_one()
+        vals = {}
+        sources = []
+        config = self.env['ir.config_parameter'].sudo()
+        hardcover_key = config.get_param('book_data.hardcover_api_key')
+        if not hardcover_key:
+            return vals, sources
+
+        try:
+            edition = self._hardcover_fetch_edition(self.barcode, hardcover_key)
+            if edition:
+                parsed = self._hardcover_parse_edition(edition, force=force)
+                if parsed:
+                    vals.update(parsed)
+                    sources.append('Hardcover')
+        except Exception as e:
+            _logger.warning("Failed to fetch Hardcover data for ISBN %s: %s", self.barcode, e)
+
+        try:
+            reviews_data = self._hardcover_fetch_reviews(self.barcode, hardcover_key)
+            if reviews_data:
+                review_vals = self._hardcover_parse_reviews(reviews_data)
+                if review_vals:
+                    vals.update(review_vals)
+        except Exception as e:
+            _logger.warning("Failed to fetch Hardcover reviews for ISBN %s: %s", self.barcode, e)
+
+        return vals, sources
+
+    def _refresh_titlepage_data(self, force=True):
+        """Fetch and parse Titlepage ONIX data. Returns (vals, sources)."""
+        self.ensure_one()
+        vals = {}
+        sources = []
+        config = self.env['ir.config_parameter'].sudo()
+        titlepage_token = config.get_param('book_data.titlepage_api_token')
+        if not titlepage_token:
+            return vals, sources
+
+        try:
+            product_xml = self._titlepage_fetch_product(self.barcode, titlepage_token)
+            if product_xml is not None:
+                parsed = self._titlepage_parse_product(product_xml, force=force)
+                if parsed:
+                    vals.update(parsed)
+                    sources.append('Titlepage')
+        except Exception:
+            _logger.exception("Failed to fetch Titlepage data for ISBN %s", self.barcode)
+
+        return vals, sources
+
+    def action_refresh_hardcover_data(self):
+        """Button action to refresh Hardcover data only, overwriting existing values."""
+        self.ensure_one()
+        if not self.barcode or not self.barcode.startswith(('978', '979')):
+            raise UserError(_('A valid ISBN barcode (starting with 978 or 979) is required to fetch book data.'))
+
+        config = self.env['ir.config_parameter'].sudo()
+        if not config.get_param('book_data.hardcover_api_key'):
+            raise UserError(_('Configure Hardcover API key in Settings > Inventory > Barcode.'))
+
+        vals, sources = self._refresh_hardcover_data(force=True)
+        if vals:
+            self.write(vals)
+
+        if sources:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Book Data Refreshed'),
+                    'message': _('Updated from %s: %s') % (', '.join(sources), ', '.join(vals.keys())),
+                    'type': 'success',
+                    'sticky': False,
+                },
+            }
+
+        raise UserError(_('No Hardcover data found for ISBN %s.') % self.barcode)
+
+    def action_refresh_titlepage_data(self):
+        """Button action to refresh Titlepage data only, overwriting existing values."""
+        self.ensure_one()
+        if not self.barcode or not self.barcode.startswith(('978', '979')):
+            raise UserError(_('A valid ISBN barcode (starting with 978 or 979) is required to fetch book data.'))
+
+        config = self.env['ir.config_parameter'].sudo()
+        if not config.get_param('book_data.titlepage_api_token'):
+            raise UserError(_('Configure Titlepage API token in Settings > Inventory > Barcode.'))
+
+        vals, sources = self._refresh_titlepage_data(force=True)
+        if vals:
+            self.write(vals)
+
+        if sources:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Book Data Refreshed'),
+                    'message': _('Updated from %s: %s') % (', '.join(sources), ', '.join(vals.keys())),
+                    'type': 'success',
+                    'sticky': False,
+                },
+            }
+
+        raise UserError(_('No Titlepage data found for ISBN %s.') % self.barcode)
+
     def action_refresh_book_data(self):
         """Button action to refresh book data from external APIs, overwriting existing values."""
         self.ensure_one()
         if not self.barcode or not self.barcode.startswith(('978', '979')):
             raise UserError(_('A valid ISBN barcode (starting with 978 or 979) is required to fetch book data.'))
 
-        hardcover_vals = {}
-        titlepage_vals = {}
-        sources = []
         config = self.env['ir.config_parameter'].sudo()
-
         hardcover_key = config.get_param('book_data.hardcover_api_key')
-        if hardcover_key:
-            try:
-                edition = self._hardcover_fetch_edition(self.barcode, hardcover_key)
-                if edition:
-                    hardcover_vals = self._hardcover_parse_edition(edition, force=True)
-                    if hardcover_vals:
-                        sources.append('Hardcover')
-            except Exception as e:
-                _logger.warning("Failed to fetch Hardcover data for ISBN %s: %s", self.barcode, e)
-
         titlepage_token = config.get_param('book_data.titlepage_api_token')
-        if titlepage_token:
-            try:
-                product_xml = self._titlepage_fetch_product(self.barcode, titlepage_token)
-                if product_xml is not None:
-                    titlepage_vals = self._titlepage_parse_product(product_xml, force=True)
-                    if titlepage_vals:
-                        sources.append('Titlepage')
-            except Exception:
-                _logger.exception("Failed to fetch Titlepage data for ISBN %s", self.barcode)
-
         if not hardcover_key and not titlepage_token:
             raise UserError(_('Configure API keys in Settings > Inventory > Barcode to auto-fetch book data.'))
+
+        hardcover_vals, hardcover_sources = self._refresh_hardcover_data(force=True)
+        titlepage_vals, titlepage_sources = self._refresh_titlepage_data(force=True)
 
         # Titlepage as base, Hardcover overwrites (Hardcover takes priority)
         all_vals = {**titlepage_vals, **hardcover_vals}
         if all_vals:
             self.write(all_vals)
 
+        sources = titlepage_sources + hardcover_sources
         if sources:
             return {
                 'type': 'ir.actions.client',
@@ -319,16 +478,53 @@ class ProductTemplate(models.Model):
 
         # Author - contributions are in the book
         contributions = book.get('contributions') or []
-        authors = [c['author']['name'] for c in contributions if c.get('author', {}).get('name')]
-        if authors and (force or not self.x_author):
-            vals['x_author'] = ', '.join(authors)
+        author_records = []
+        author_names = []
+        for contribution in contributions:
+            author = contribution.get('author') or {}
+            author_name = author.get('name')
+            if not author_name:
+                continue
+            author_hc_id = author.get('id')
+            if isinstance(author_hc_id, str):
+                try:
+                    author_hc_id = int(author_hc_id)
+                except ValueError:
+                    author_hc_id = False
+            author_rec = self.env['bookstore.author']._hardcover_get_or_create(
+                author_name, author_hc_id or False,
+            )
+            author_records.append(author_rec)
+            author_names.append(author_name)
+
+        if author_records and (force or not self.x_author):
+            vals['x_author'] = ', '.join(author_names)
+            vals['author_line_ids'] = [
+                fields.Command.clear(),
+            ] + [
+                fields.Command.create({
+                    'author_id': author.id,
+                    'sequence': idx,
+                })
+                for idx, author in enumerate(author_records)
+            ]
 
         # Publisher - now at edition level
         publisher = edition.get('publisher')
         if publisher and isinstance(publisher, dict):
             publisher_name = publisher.get('name')
+            publisher_hc_id = publisher.get('id')
+            if isinstance(publisher_hc_id, str):
+                try:
+                    publisher_hc_id = int(publisher_hc_id)
+                except ValueError:
+                    publisher_hc_id = False
             if publisher_name and (force or not self.x_publisher):
+                publisher_rec = self.env['bookstore.publisher']._hardcover_get_or_create(
+                    publisher_name, publisher_hc_id or False,
+                )
                 vals['x_publisher'] = publisher_name
+                vals['x_publisher_id'] = publisher_rec.id
 
         # Publication date
         release_date = edition.get('release_date')
@@ -349,6 +545,25 @@ class ProductTemplate(models.Model):
             if image_data:
                 vals['image_1920'] = image_data
 
+        # Hardcover IDs for book/edition grouping
+        edition_id = edition.get('id')
+        if isinstance(edition_id, str):
+            try:
+                edition_id = int(edition_id)
+            except ValueError:
+                edition_id = False
+        if edition_id and (force or not self.x_hardcover_edition_id):
+            vals['x_hardcover_edition_id'] = edition_id
+
+        book_id = book.get('id')
+        if isinstance(book_id, str):
+            try:
+                book_id = int(book_id)
+            except ValueError:
+                book_id = False
+        if book_id and (force or not self.x_hardcover_book_id):
+            vals['x_hardcover_book_id'] = book_id
+
         return vals
 
     @api.model
@@ -361,6 +576,92 @@ class ProductTemplate(models.Model):
         except requests.RequestException:
             _logger.warning("Failed to download image from %s", url)
             return None
+
+    @api.model
+    def _hardcover_fetch_reviews(self, isbn, api_key):
+        """Fetch review and rating data from Hardcover GraphQL API."""
+        isbn_clean = isbn.strip()
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {api_key}',
+        }
+        try:
+            _logger.debug("Querying Hardcover reviews API for ISBN: %s", isbn_clean)
+            response = requests.post(
+                HARDCOVER_API_URL,
+                json={'query': HARDCOVER_REVIEWS_QUERY, 'variables': {'isbn': isbn_clean}},
+                headers=headers,
+                timeout=10,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if 'errors' in data:
+                _logger.warning("Hardcover reviews API errors for ISBN %s: %s", isbn_clean, data['errors'])
+                return None
+
+            editions = data.get('data', {}).get('editions', [])
+            if not editions:
+                return None
+            return editions[0].get('book')
+        except requests.RequestException as e:
+            _logger.exception("Hardcover reviews API request failed for ISBN %s: %s", isbn_clean, str(e))
+            return None
+
+    def _hardcover_parse_reviews(self, book):
+        """Parse Hardcover book response into review field values."""
+        vals = {}
+        if not book:
+            return vals
+
+        rating = book.get('rating')
+        if rating is not None:
+            try:
+                vals['x_hardcover_rating'] = float(rating)
+            except (ValueError, TypeError):
+                pass
+
+        ratings_count = book.get('ratings_count')
+        if ratings_count is not None:
+            try:
+                vals['x_hardcover_ratings_count'] = int(ratings_count)
+            except (ValueError, TypeError):
+                pass
+
+        reviews_count = book.get('reviews_count')
+        if reviews_count is not None:
+            try:
+                vals['x_hardcover_reviews_count'] = int(reviews_count)
+            except (ValueError, TypeError):
+                pass
+
+        user_books = book.get('user_books') or []
+        reviews = []
+        for ub in user_books:
+            review_raw = ub.get('review_raw')
+            if not review_raw:
+                continue
+            user = ub.get('user') or {}
+            reviews.append({
+                'username': user.get('name') or 'Anonymous',
+                'rating': ub.get('rating'),
+                'reviewed_at': ub.get('reviewed_at'),
+                'likes_count': ub.get('likes_count') or 0,
+                'review_raw': review_raw,
+            })
+
+        if reviews:
+            vals['x_hardcover_reviews_json'] = json.dumps(reviews)
+
+        vals['x_hardcover_reviews_fetch_date'] = fields.Datetime.now()
+        return vals
+
+    def get_hardcover_reviews(self):
+        """Return parsed Hardcover reviews as a list of dicts."""
+        self.ensure_one()
+        if not self.x_hardcover_reviews_json:
+            return []
+        return json.loads(self.x_hardcover_reviews_json)
 
     # --- Titlepage (ONIX 3.1) ---
 
@@ -479,6 +780,10 @@ class ProductTemplate(models.Model):
                 vals['x_author'] = ', '.join(authors)
 
         # Publisher (prefer imprint over publisher)
+        # NOTE: we only set the Char display value here. The publisher
+        # relation (x_publisher_id) is populated from Hardcover so it
+        # matches Hardcover's canonical grouping and avoids mismatches
+        # with Titlepage distributor/imprint names.
         if publishing is not None and (force or not self.x_publisher):
             imprint_el = _find(publishing, 'Imprint/ImprintName')
             if imprint_el is not None and imprint_el.text:

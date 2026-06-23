@@ -1,6 +1,6 @@
 {
     'name': 'Bookstore',
-    'version': '19.0.1.2.0',
+    'version': '19.0.1.3.4',
     'category': 'Retail',
     'depends': [
         'account',
@@ -17,6 +17,7 @@
         'website_sale_stock',
     ],
     'data': [
+        'security/ir.model.access.csv',
         'data/ir_default.xml',
         'data/res_config_settings.xml',
         'data/stock_warehouse.xml',

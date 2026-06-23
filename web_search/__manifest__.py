@@ -1,6 +1,6 @@
 {
     'name': 'Web Search',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.2',
     'category': 'Website',
     'depends': [
         'bookstore',

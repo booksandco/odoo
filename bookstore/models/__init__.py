@@ -1,3 +1,6 @@
+from . import book_author
+from . import book_publisher
+from . import book_product_author
 from . import loyalty_card
 from . import loyalty_program
 from . import product_product

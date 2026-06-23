@@ -13,6 +13,10 @@
                             string="Refresh Book Data"
                             class="oe_highlight"
                             invisible="not x_is_isbn"/>
+                    <button name="action_refresh_hardcover_data"
+                            type="object"
+                            string="Refresh Hardcover Data"
+                            invisible="not x_is_isbn"/>
                     <button name="action_view_on_hardcover"
                             type="object"
                             string="View on Hardcover"
@@ -54,6 +58,22 @@
             <xpath expr="//field[@name='barcode']" position="replace">
                 <field name="barcode" string="ISBN" invisible="not x_is_isbn"/>
                 <field name="barcode" string="Barcode" invisible="x_is_isbn"/>
+            </xpath>
+        </field>
+    </record>
+    <record id="product_template_form_view_book_data_reviews" model="ir.ui.view">
+        <field name="name">product.template.form.book_data.reviews</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="bookstore.product_template_product_form_customization_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='sales']" position="inside">
+                <group string="Hardcover Reviews" invisible="not x_is_isbn">
+                    <field name="x_hardcover_rating"/>
+                    <field name="x_hardcover_ratings_count"/>
+                    <field name="x_hardcover_reviews_count"/>
+                    <field name="x_hardcover_reviews_fetch_date"/>
+                    <field name="x_hardcover_reviews_json" widget="ace" options="{'mode': 'json'}"/>
+                </group>
             </xpath>
         </field>
     </record>

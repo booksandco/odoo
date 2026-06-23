@@ -16,9 +16,26 @@
         <!-- Override the product tile template to show author and publisher next to description -->
         <template id="product_tile_author_publisher" inherit_id="website_sale.products_item" name="Product Tile with Author and Publisher">
             <xpath expr="//div[hasclass('oe_subdescription_wrapper')]/div[hasclass('oe_subdescription', 'text-muted', 'small')]/div" position="after">
-                <div t-if="product.x_author or product.x_publisher" class="o_wsale_product_author_publisher small text-muted mt-1">
-                    <div t-if="product.x_author" t-out="product.x_author"/>
-                    <div t-if="product.x_publisher" t-out="product.x_publisher"/>
+                <div t-if="product.author_line_ids or product.x_publisher_id or product.x_author or product.x_publisher" class="o_wsale_product_author_publisher small text-muted mt-1">
+                    <t t-if="product.author_line_ids">
+                        <t t-foreach="product.author_line_ids.sorted('sequence')" t-as="line">
+                            <t t-set="author_slug" t-value="request.env['ir.http']._slug(line.author_id)"/>
+                            <a t-att-href="'/shop/author/%s' % author_slug" class="text-muted" t-field="line.author_id.name"/>
+                            <t t-if="not line_last">, </t>
+                        </t>
+                    </t>
+                    <t t-elif="product.x_author">
+                        <span t-out="product.x_author"/>
+                    </t>
+                    <t t-if="product.x_publisher_id">
+                        <t t-if="product.author_line_ids or product.x_author"> · </t>
+                        <t t-set="publisher_slug" t-value="request.env['ir.http']._slug(product.x_publisher_id)"/>
+                        <a t-att-href="'/shop/publisher/%s' % publisher_slug" class="text-muted" t-field="product.x_publisher_id.name"/>
+                    </t>
+                    <t t-elif="product.x_publisher">
+                        <t t-if="product.x_author"> · </t>
+                        <span t-out="product.x_publisher"/>
+                    </t>
                 </div>
             </xpath>
         </template>

@@ -26,8 +26,8 @@
             <xpath expr="//field[@name='active']" position="after">
                 <field name="x_is_isbn" invisible="1"/>
                 <xpath expr="//field[@name='barcode']" position="move"/>
-                <field name="x_author" invisible="not x_is_isbn"/>
-                <field name="x_publisher" invisible="not x_is_isbn"/>
+                <field name="author_ids" invisible="not x_is_isbn" widget="many2many_tags" options="{'no_create': False}"/>
+                <field name="x_publisher_id" invisible="not x_is_isbn" options="{'no_create': False}"/>
                 <field name="x_publication_date" invisible="not x_is_isbn"/>
                 <xpath expr="//field[@name='categ_id']" position="move"/>
             </xpath>
@@ -55,7 +55,7 @@
         <field name="priority">99</field>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="attributes">
-                <attribute name="filter_domain">['|', '|', '|', '|', '|', ('default_code', 'ilike', self), ('product_variant_ids.default_code', 'ilike', self), ('name', 'ilike', self), ('barcode', 'ilike', self), ('x_author', 'ilike', self), ('x_publisher', 'ilike', self)]</attribute>
+                <attribute name="filter_domain">['|', '|', '|', '|', '|', ('default_code', 'ilike', self), ('product_variant_ids.default_code', 'ilike', self), ('name', 'ilike', self), ('barcode', 'ilike', self), ('author_ids.name', 'ilike', self), ('x_publisher_id.name', 'ilike', self)]</attribute>
             </xpath>
         </field>
     </record>
@@ -69,8 +69,8 @@
         <field name="type">list</field>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='list_price']" position="before">
-                <field name="x_author" optional="show"/>
-                <field name="x_publisher" optional="show"/>
+                <field name="author_ids" widget="many2many_tags" optional="show"/>
+                <field name="x_publisher_id" optional="show"/>
             </xpath>
         </field>
     </record>
@@ -83,11 +83,11 @@
         <field name="priority">99</field>
         <field name="arch" type="xml">
             <xpath expr="//span[field[@name='list_price']]" position="before">
-                <span t-if="record.x_author.value">
-                    Author: <field name="x_author"/>
+                <span t-if="record.author_ids.value">
+                    <field name="author_ids" widget="many2many_tags"/>
                 </span>
-                <span t-if="record.x_publisher.value">
-                    Publisher: <field name="x_publisher"/>
+                <span t-if="record.x_publisher_id.value">
+                    Publisher: <field name="x_publisher_id"/>
                 </span>
             </xpath>
         </field>
