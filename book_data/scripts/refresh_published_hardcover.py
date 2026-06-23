@@ -19,7 +19,9 @@ SLEEP_BETWEEN_CALLS = 0.5
 
 products = env['product.template'].search([
     ('is_published', '=', True),
-    ('x_is_isbn', '=', True),
+    '|',
+    ('barcode', '=like', '978%'),
+    ('barcode', '=like', '979%'),
 ])
 
 total = len(products)
