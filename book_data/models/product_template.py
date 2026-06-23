@@ -97,6 +97,10 @@ _DATA_SCORE_WEIGHTS = {
     'seller_ids': 5,
     'categ_id': 4,
     'x_publication_date': 4,
+    'x_hardcover_rating': 3,
+    'x_hardcover_reviews_json': 3,
+    'x_hardcover_book_id': 2,
+    'x_hardcover_edition_id': 2,
 }
 
 
@@ -135,8 +139,9 @@ class ProductTemplate(models.Model):
 
     @api.depends('x_data_score')
     def _compute_x_data_score_display(self):
+        max_score = sum(_DATA_SCORE_WEIGHTS.values())
         for rec in self:
-            rec.x_data_score_display = '%s/100' % rec.x_data_score
+            rec.x_data_score_display = '%s/%s' % (rec.x_data_score, max_score)
 
     @api.depends(*_DATA_SCORE_WEIGHTS)
     def _compute_data_score(self):
@@ -167,6 +172,14 @@ class ProductTemplate(models.Model):
                 score += _DATA_SCORE_WEIGHTS['description_ecommerce']
             if rec.weight:
                 score += _DATA_SCORE_WEIGHTS['weight']
+            if rec.x_hardcover_rating:
+                score += _DATA_SCORE_WEIGHTS['x_hardcover_rating']
+            if rec.x_hardcover_reviews_json:
+                score += _DATA_SCORE_WEIGHTS['x_hardcover_reviews_json']
+            if rec.x_hardcover_book_id:
+                score += _DATA_SCORE_WEIGHTS['x_hardcover_book_id']
+            if rec.x_hardcover_edition_id:
+                score += _DATA_SCORE_WEIGHTS['x_hardcover_edition_id']
             rec.x_data_score = score
 
     @api.onchange('barcode')
