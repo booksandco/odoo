@@ -23,7 +23,7 @@ _logger = logging.getLogger(__name__)
 SLEEP_BETWEEN_CALLS = 0.5
 
 # Skip products refreshed in the last N hours (allows safe resumption).
-SKIP_RECENTLY_REFRESHED_HOURS = 1
+SKIP_RECENTLY_REFRESHED_HOURS = 168  # 7 days
 
 # Set INCLUDE_UNPUBLISHED=1 to also refresh unpublished ISBN products.
 INCLUDE_UNPUBLISHED = os.environ.get('INCLUDE_UNPUBLISHED', '0') == '1'
