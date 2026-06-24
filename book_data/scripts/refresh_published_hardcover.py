@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""Backfill Hardcover metadata + reviews for all published ISBN products.
+"""Backfill Hardcover metadata + reviews for ISBN products.
+
+By default only published products are refreshed. Set the environment variable
+INCLUDE_UNPUBLISHED=1 to refresh all ISBN products (published and unpublished).
 
 Run inside an odoo-bin shell, e.g.:
 
     odoo-bin shell -c /path/to/odoo.conf -d mydb < book_data/scripts/refresh_published_hardcover.py
+    INCLUDE_UNPUBLISHED=1 odoo-bin shell -c /path/to/odoo.conf -d mydb < book_data/scripts/refresh_published_hardcover.py
 
-The script iterates over every published product with an ISBN barcode, calls
-action_refresh_hardcover_data(), commits after each product, and logs failures
-per-product without stopping the batch.
+The script iterates over matching products, calls action_refresh_hardcover_data(),
+commits after each product, and logs failures per-product without stopping the batch.
 """
 import logging
+import os
 import time
 from datetime import datetime, timedelta
 
@@ -21,21 +25,28 @@ SLEEP_BETWEEN_CALLS = 0.5
 # Skip products refreshed in the last N hours (allows safe resumption).
 SKIP_RECENTLY_REFRESHED_HOURS = 1
 
+# Set INCLUDE_UNPUBLISHED=1 to also refresh unpublished ISBN products.
+INCLUDE_UNPUBLISHED = os.environ.get('INCLUDE_UNPUBLISHED', '0') == '1'
+
 Product = env['product.template']
 cutoff = datetime.utcnow() - timedelta(hours=SKIP_RECENTLY_REFRESHED_HOURS)
 
-products = Product.search([
-    ('is_published', '=', True),
+domain = [
     '|',
     ('barcode', '=like', '978%'),
     ('barcode', '=like', '979%'),
     '|',
     ('x_hardcover_reviews_fetch_date', '=', False),
     ('x_hardcover_reviews_fetch_date', '<', cutoff),
-])
+]
+if not INCLUDE_UNPUBLISHED:
+    domain = [('is_published', '=', True)] + domain
+
+products = Product.search(domain)
 
 total = len(products)
-_logger.info("Found %s published ISBN product(s) to refresh", total)
+product_type = "ISBN" if INCLUDE_UNPUBLISHED else "published ISBN"
+_logger.info("Found %s %s product(s) to refresh", total, product_type)
 
 success = 0
 failed = 0
