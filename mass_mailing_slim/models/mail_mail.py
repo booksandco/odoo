@@ -37,15 +37,11 @@ class MailMail(models.Model):
         flags = self._mass_mailing_slim_flags()
         if not flags:
             return body
-        if flags["move_pixel"]:
-            body = html_slim.relocate_tracking_pixel(body)
-        if flags["strip_classes"]:  # aggressive tier (currently a no-op stub)
-            body = html_slim.strip_dead_classes(body, allowlist=self._mass_mailing_slim_allowlist())
-        if flags["trim_defaults"]:  # aggressive tier (currently a no-op stub)
-            body = html_slim.trim_redundant_inline_defaults(body)
-        if flags["minify"]:
-            body = html_slim.minify_email_html(body)
-        return body
+        return html_slim.apply_pipeline(
+            body,
+            flags,
+            allowlist=self._mass_mailing_slim_allowlist(),
+        )
 
     def _prepare_outgoing_list(self, mail_server=False, doc_to_followers=None):
         email_list = super()._prepare_outgoing_list(

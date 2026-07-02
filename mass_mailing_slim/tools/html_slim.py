@@ -231,6 +231,28 @@ def strip_dead_classes(html, allowlist=DEFAULT_CLASS_ALLOWLIST):
     return _as_same_type(html, _restore_regions(protected_text, regions))
 
 
+def apply_pipeline(html, flags, allowlist=DEFAULT_CLASS_ALLOWLIST):
+    """Apply the whole server-side slim pipeline to ``html``.
+
+    ``flags`` is a dict with the same keys used by the model override:
+    ``move_pixel``, ``strip_classes``, ``trim_defaults``, ``minify``.
+    Used both at send time and by ``mailing.email_size_kb`` so the editor
+    warning reflects the size that will actually be sent.
+    """
+    if not html:
+        return html
+    body = html
+    if flags.get("move_pixel"):
+        body = relocate_tracking_pixel(body)
+    if flags.get("strip_classes"):
+        body = strip_dead_classes(body, allowlist=allowlist)
+    if flags.get("trim_defaults"):
+        body = trim_redundant_inline_defaults(body)
+    if flags.get("minify"):
+        body = minify_email_html(body)
+    return body
+
+
 def trim_redundant_inline_defaults(html):
     """Delete no-op inline declarations force-injected by the JS inliner.
 
