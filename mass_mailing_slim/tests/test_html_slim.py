@@ -210,6 +210,41 @@ class TestHtmlSlim(common.TransactionCase):
         out = html_slim.compress_shorthands(html)
         self.assertIn("border-radius:4px", out)
 
+    def test_compress_partial_padding_no_crash(self):
+        # Only one side set: cannot become a shorthand, must stay a longhand.
+        html = "<div style='padding-right:5px;color:red'>x</div>"
+        out = html_slim.compress_shorthands(html)
+        self.assertIn("padding-right:5px", out)
+        self.assertIn("color:red", out)
+        self.assertNotIn("padding:", out)
+
+    def test_compress_partial_two_sides_stay_longhand(self):
+        html = "<div style='padding-top:5px;padding-bottom:5px'>x</div>"
+        out = html_slim.compress_shorthands(html)
+        self.assertIn("padding-top:5px", out)
+        self.assertIn("padding-bottom:5px", out)
+        self.assertNotIn("padding:", out)  # can't be a 4-side shorthand
+
+    def test_compress_partial_border_width_no_crash(self):
+        html = "<div style='border-left-width:2px;color:red'>x</div>"
+        out = html_slim.compress_shorthands(html)
+        self.assertIn("border-left-width:2px", out)
+        self.assertIn("color:red", out)
+
+    def test_compress_partial_radius_no_crash(self):
+        html = "<div style='border-top-left-radius:4px;color:red'>x</div>"
+        out = html_slim.compress_shorthands(html)
+        self.assertIn("border-top-left-radius:4px", out)
+        self.assertIn("color:red", out)
+        self.assertNotIn("border-radius:", out)
+
+    def test_compress_keeps_border_collapse(self):
+        # border-collapse starts with 'border-' but is NOT a radius longhand.
+        html = "<div style='border-top-left-radius:4px;border-top-right-radius:4px;border-bottom-right-radius:4px;border-bottom-left-radius:4px;border-collapse:collapse'>x</div>"
+        out = html_slim.compress_shorthands(html)
+        self.assertIn("border-radius:4px", out)
+        self.assertIn("border-collapse:collapse", out)
+
     # -- compression: style-block minification --------------------------------
 
     def test_minify_style_block(self):

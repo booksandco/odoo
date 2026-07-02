@@ -134,6 +134,27 @@ _DECL_WS_RE = re.compile(r"\s*:\s*")
 # Shorthand compression: maps property -> number of sides/corners to consider.
 _SIDED_PROPS = ("padding", "margin", "border-width", "border-style", "border-color")
 _RADIUS_PROP = "border-radius"
+_SIDE_NAMES = ("top", "right", "bottom", "left")
+# The four border-radius corner longhands, mapped to their [tl, tr, br, bl] index.
+_RADIUS_LONGHANDS = {
+    "border-top-left-radius": 0,
+    "border-top-right-radius": 1,
+    "border-bottom-right-radius": 2,
+    "border-bottom-left-radius": 3,
+}
+
+
+def _longhand_name(base, side_idx):
+    """Reconstruct the longhand property for a sided base + side index.
+
+    ``padding``/``margin`` -> ``padding-top``; ``border-width`` etc. ->
+    ``border-top-width``.
+    """
+    side = _SIDE_NAMES[side_idx]
+    if base in ("padding", "margin"):
+        return f"{base}-{side}"
+    kind = base.split("-", 1)[1]  # width / style / color
+    return f"border-{side}-{kind}"
 
 
 def _as_same_type(original, text):
@@ -316,17 +337,16 @@ def _rewrite_style_value(value):
     for prop, sides in groups.items():
         if all(s is None for s in sides):
             continue
-        # Fill missing sides by CSS shorthand rules:
-        # [top, right, bottom, left]; if only top set, all sides = top;
-        # if top+right set, bottom=top, left=right.
-        vals = list(sides)
-        if vals[1] is None:
-            vals[1] = vals[0]
-        if vals[2] is None:
-            vals[2] = vals[0]
-        if vals[3] is None:
-            vals[3] = vals[1]
-        shorthand.append(f"{prop}:{_compress_sided(prop, vals)}")
+        if any(s is None for s in sides):
+            # A CSS shorthand always starts at the top value and implies all
+            # four sides, so a partial set (e.g. only padding-left) cannot be
+            # collapsed without changing semantics. Re-emit the present sides
+            # as longhands, unchanged.
+            for idx, val in enumerate(sides):
+                if val is not None:
+                    shorthand.append(f"{_longhand_name(prop, idx)}:{val}")
+            continue
+        shorthand.append(f"{prop}:{_compress_sided(prop, sides)}")
 
     # Merge non-directional border-* longhands into a single "border" shorthand
     # only when all three are present; otherwise keep whichever were set so we
@@ -340,27 +360,24 @@ def _rewrite_style_value(value):
             if val is not None:
                 shorthand.append(f"border-{name}:{val}")
 
-    # border-radius shorthand compression.
+    # border-radius shorthand compression. Only collapse when all four corners
+    # are present (a shorthand implies all four); otherwise leave the corner
+    # longhands untouched. Note the ``:`` guard: ``remaining`` may hold entity
+    # sentinels or malformed fragments with no colon.
     radius_parts = [None, None, None, None]
     for decl in remaining:
-        prop, val = decl.split(":", 1)
-        pl = prop.strip().lower()
-        if pl == "border-top-left-radius":
-            radius_parts[0] = val.strip()
-        elif pl == "border-top-right-radius":
-            radius_parts[1] = val.strip()
-        elif pl == "border-bottom-right-radius":
-            radius_parts[2] = val.strip()
-        elif pl == "border-bottom-left-radius":
-            radius_parts[3] = val.strip()
-    if any(r is not None for r in radius_parts):
-        if radius_parts[1] is None:
-            radius_parts[1] = radius_parts[0]
-        if radius_parts[2] is None:
-            radius_parts[2] = radius_parts[0]
-        if radius_parts[3] is None:
-            radius_parts[3] = radius_parts[1]
-        remaining = [d for d in remaining if not d.split(":", 1)[0].strip().lower().startswith("border-")]
+        if ":" not in decl:
+            continue
+        pl = decl.split(":", 1)[0].strip().lower()
+        if pl in _RADIUS_LONGHANDS:
+            radius_parts[_RADIUS_LONGHANDS[pl]] = decl.split(":", 1)[1].strip()
+    if all(r is not None for r in radius_parts):
+        # Drop only the four radius longhands (not every ``border-*`` decl such
+        # as border-collapse) and replace them with the compressed shorthand.
+        remaining = [
+            d for d in remaining
+            if ":" not in d or d.split(":", 1)[0].strip().lower() not in _RADIUS_LONGHANDS
+        ]
         remaining.append(f"border-radius:{_compress_radius(radius_parts)}")
 
     result = ";".join(remaining + shorthand)

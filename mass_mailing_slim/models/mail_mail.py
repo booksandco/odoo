@@ -1,8 +1,12 @@
 # Part of the booksandco custom addons. See LICENSE.
+import logging
+
 from odoo import models
 from odoo.tools.misc import file_open
 
 from odoo.addons.mass_mailing_slim.tools import html_slim
+
+_logger = logging.getLogger(__name__)
 
 
 class MailMail(models.Model):
@@ -57,12 +61,19 @@ class MailMail(models.Model):
         flags = self._mass_mailing_slim_flags()
         if not flags:
             return body
-        return html_slim.apply_pipeline(
-            body,
-            flags,
-            allowlist=self._mass_mailing_slim_allowlist(),
-            shipped_style_css=self._mass_mailing_slim_shipped_css(),
-        )
+        try:
+            return html_slim.apply_pipeline(
+                body,
+                flags,
+                allowlist=self._mass_mailing_slim_allowlist(),
+                shipped_style_css=self._mass_mailing_slim_shipped_css(),
+            )
+        except Exception:  # noqa: BLE001 - slimming must never block an outgoing mail
+            _logger.exception(
+                "mass_mailing_slim: slim pipeline failed for mail %s; "
+                "sending unmodified body.", self.id,
+            )
+            return body
 
     def _prepare_outgoing_list(self, mail_server=False, doc_to_followers=None):
         email_list = super()._prepare_outgoing_list(

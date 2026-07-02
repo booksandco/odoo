@@ -61,12 +61,19 @@ class MailingMailing(models.Model):
         for mailing in self:
             body = mailing.body_html or ""
             if flags:
-                body = html_slim.apply_pipeline(
-                    body,
-                    flags,
-                    allowlist=allowlist,
-                    shipped_style_css=shipped_css,
-                )
+                try:
+                    body = html_slim.apply_pipeline(
+                        body,
+                        flags,
+                        allowlist=allowlist,
+                        shipped_style_css=shipped_css,
+                    )
+                except Exception:  # noqa: BLE001 - size preview must never crash the form
+                    _logger.exception(
+                        "mass_mailing_slim: slim pipeline failed for mailing %s; "
+                        "showing raw size.", mailing.id,
+                    )
+                    body = mailing.body_html or ""
             size_kb = len(body.encode("utf-8")) / 1024.0
             mailing.email_size_kb = round(size_kb, 1)
             mailing.email_size_warning = size_kb >= warn_kb
