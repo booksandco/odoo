@@ -5,7 +5,7 @@
         <field name="model">mailing.mailing</field>
         <field name="inherit_id" ref="mass_mailing.view_mail_mass_mailing_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//form[@class='o_mass_mailing_mailing_form']/header" position="after">
+            <xpath expr="//form[hasclass('o_mass_mailing_mailing_form')]/header" position="after">
                 <div class="alert alert-warning" role="alert" invisible="not email_size_warning">
                     <field name="email_size_warning" invisible="1"/>
                     <i class="fa fa-exclamation-triangle me-1" role="img" aria-label="Warning" title="Warning"/>
