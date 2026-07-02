@@ -1,7 +1,7 @@
 # Part of the booksandco custom addons. See LICENSE.
 {
     'name': 'Mass Mailing Slim',
-    'version': '19.0.1.1.2',
+    'version': '19.0.1.2.0',
     'category': 'Marketing',
     'summary': 'Shrink Email Marketing HTML below Gmail\'s 102 KB clip limit',
     'description': """

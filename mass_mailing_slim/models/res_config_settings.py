@@ -30,12 +30,27 @@ class ResConfigSettings(models.TransientModel):
         config_parameter="mass_mailing_slim.move_pixel",
     )
     mass_mailing_slim_strip_classes = fields.Boolean(
-        string="Strip Dead CSS Classes (aggressive)",
+        string="Strip Dead CSS Classes",
         config_parameter="mass_mailing_slim.strip_classes",
     )
     mass_mailing_slim_trim_defaults = fields.Boolean(
-        string="Trim Redundant Inline Defaults (aggressive)",
+        string="Trim Redundant Inline Defaults",
         config_parameter="mass_mailing_slim.trim_defaults",
+    )
+    mass_mailing_slim_normalize_css = fields.Boolean(
+        string="Normalize CSS Values",
+        config_parameter="mass_mailing_slim.normalize_css",
+        help="Shorten rgb() colors, hex values, and 0px units in inline styles.",
+    )
+    mass_mailing_slim_compress_shorthands = fields.Boolean(
+        string="Compress Shorthand Properties",
+        config_parameter="mass_mailing_slim.compress_shorthands",
+        help="Collapse padding/margin/border longhands into shorter shorthands.",
+    )
+    mass_mailing_slim_minify_style_blocks = fields.Boolean(
+        string="Minify <style> Blocks",
+        config_parameter="mass_mailing_slim.minify_style_blocks",
+        help="Remove comments and whitespace from CSS blocks shipped in the email.",
     )
     mass_mailing_slim_warn_kb = fields.Integer(
         string="Size Warning Threshold (KB)",

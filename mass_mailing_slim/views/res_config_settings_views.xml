@@ -26,15 +26,30 @@
                              invisible="not mass_mailing_slim_enabled">
                         <field name="mass_mailing_slim_move_pixel"/>
                     </setting>
-                    <setting string="Strip dead CSS classes (aggressive)"
-                             help="Remove class attributes not used by surviving &lt;style&gt; rules. Test in Gmail/Outlook first."
+                    <setting string="Strip dead CSS classes"
+                             help="Remove class attributes not used by the CSS that ships with the email."
                              invisible="not mass_mailing_slim_enabled">
                         <field name="mass_mailing_slim_strip_classes"/>
                     </setting>
-                    <setting string="Trim redundant inline defaults (aggressive)"
+                    <setting string="Trim redundant inline defaults"
                              help="Drop no-op declarations (box-sizing/border-radius:0) injected on every element."
                              invisible="not mass_mailing_slim_enabled">
                         <field name="mass_mailing_slim_trim_defaults"/>
+                    </setting>
+                    <setting string="Normalize CSS values"
+                             help="Shorten rgb() colors, hex values, and 0px units in inline styles."
+                             invisible="not mass_mailing_slim_enabled">
+                        <field name="mass_mailing_slim_normalize_css"/>
+                    </setting>
+                    <setting string="Compress shorthand properties"
+                             help="Collapse padding/margin/border longhands into shorter shorthands."
+                             invisible="not mass_mailing_slim_enabled">
+                        <field name="mass_mailing_slim_compress_shorthands"/>
+                    </setting>
+                    <setting string="Minify &lt;style&gt; blocks"
+                             help="Remove comments and whitespace from CSS blocks shipped in the email."
+                             invisible="not mass_mailing_slim_enabled">
+                        <field name="mass_mailing_slim_minify_style_blocks"/>
                     </setting>
                     <setting string="Size warning threshold (KB)"
                              help="Warn in the editor when the email HTML exceeds this size.">

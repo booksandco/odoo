@@ -14,6 +14,14 @@
                     <span> KB. Gmail clips messages over ~102 KB, hiding content and breaking open tracking. Consider removing snippets or heavy images.</span>
                 </div>
             </xpath>
+            <xpath expr="//form[hasclass('o_mass_mailing_mailing_form')]/header/button[@name='action_test']" position="after">
+                <button name="action_mass_mailing_slim_diagnose"
+                        type="object"
+                        string="Diagnose size"
+                        class="btn-secondary"
+                        help="Show where bytes are spent in this mailing's HTML."
+                        invisible="not email_size_warning"/>
+            </xpath>
         </field>
     </record>
 </odoo>

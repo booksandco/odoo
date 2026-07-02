@@ -30,6 +30,18 @@
             <field name="key">mass_mailing_slim.trim_defaults</field>
             <field name="value">False</field>
         </record>
+        <record id="param_slim_normalize_css" model="ir.config_parameter">
+            <field name="key">mass_mailing_slim.normalize_css</field>
+            <field name="value">False</field>
+        </record>
+        <record id="param_slim_compress_shorthands" model="ir.config_parameter">
+            <field name="key">mass_mailing_slim.compress_shorthands</field>
+            <field name="value">False</field>
+        </record>
+        <record id="param_slim_minify_style_blocks" model="ir.config_parameter">
+            <field name="key">mass_mailing_slim.minify_style_blocks</field>
+            <field name="value">False</field>
+        </record>
         <record id="param_slim_warn_kb" model="ir.config_parameter">
             <field name="key">mass_mailing_slim.warn_kb</field>
             <field name="value">100</field>

@@ -9,6 +9,8 @@ Tiers (see PLAN.md):
   ``relocate_tracking_pixel``.
 * Aggressive tier (off by default): ``strip_dead_classes``,
   ``trim_redundant_inline_defaults``.
+* Compression tier (off by default): ``normalize_css_values``,
+  ``compress_shorthands``, ``minify_style_blocks``.
 
 All transforms are string/regex based and protect ``<style>``, ``<script>``,
 ``<pre>``, ``<textarea>`` and HTML comments (incl. ``[if mso]`` conditionals),
@@ -17,6 +19,7 @@ outside the specific tokens/declarations we remove.
 """
 
 import re
+from collections import Counter
 
 import markupsafe
 from lxml import etree
@@ -84,6 +87,39 @@ _BORDER_STYLE_SET_RE = re.compile(
     r"border(?:-(?:top|right|bottom|left))?-style\s*:\s*(?!none)[a-z]", re.IGNORECASE
 )
 
+# <style> block extraction (captures full element).
+_STYLE_BLOCK_RE = re.compile(r"(<style\b[^>]*>)(.*?)(</style\s*>)", re.IGNORECASE | re.DOTALL)
+
+# CSS value normalization.
+_RGB_NAMED = {
+    (0, 0, 0): "black",
+    (255, 255, 255): "white",
+    (255, 0, 0): "red",
+    (0, 128, 0): "green",
+    (0, 0, 255): "blue",
+    (255, 255, 0): "yellow",
+    (0, 255, 255): "cyan",
+    (255, 0, 255): "magenta",
+    (192, 192, 192): "silver",
+    (128, 128, 128): "gray",
+    (128, 0, 0): "maroon",
+    (128, 128, 0): "olive",
+    (0, 128, 128): "teal",
+    (128, 0, 128): "purple",
+    (0, 0, 128): "navy",
+    (255, 165, 0): "orange",
+}
+_RGB_RE = re.compile(r"rgb\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)")
+_RGBA_RE = re.compile(r"rgba\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*0\s*\)")
+_HEX_LONG_RE = re.compile(r"#([0-9a-fA-F])\1([0-9a-fA-F])\2([0-9a-fA-F])\3")
+_FLOAT_PX_RE = re.compile(r"(\d+)\.0+(px|pt|em|rem|%)")
+_ZERO_UNIT_RE = re.compile(r"\b0(?:\.0+)?(px|pt|em|rem|ex|ch|vw|vh|vmin|vmax|%|cm|mm|in|pc)\b")
+_DECL_WS_RE = re.compile(r"\s*:\s*")
+
+# Shorthand compression: maps property -> number of sides/corners to consider.
+_SIDED_PROPS = ("padding", "margin", "border-width", "border-style", "border-color")
+_RADIUS_PROP = "border-radius"
+
 
 def _as_same_type(original, text):
     """Return ``text`` wrapped in the same type as ``original`` (Markup or str)."""
@@ -110,6 +146,174 @@ def _protect_regions(text):
 
 def _restore_regions(text, regions):
     return _PLACEHOLDER_RE.sub(lambda m: regions[int(m.group(1))], text)
+
+
+def _normalize_value(value):
+    """Normalize a single CSS value."""
+    value = value.strip()
+    if not value:
+        return value
+
+    # rgba(..., 0) -> transparent
+    value = _RGBA_RE.sub("transparent", value)
+
+    # rgb(r, g, b) -> named color when possible
+    def _rgb_to_named(match):
+        rgb = tuple(int(match.group(i)) for i in range(1, 4))
+        return _RGB_NAMED.get(rgb, match.group(0))
+
+    value = _RGB_RE.sub(_rgb_to_named, value)
+
+    # #aabbcc -> #abc
+    value = _HEX_LONG_RE.sub(r"#\1\2\3", value)
+
+    # 16.0px -> 16px
+    value = _FLOAT_PX_RE.sub(r"\1\2", value)
+
+    # 0px / 0.0em / 0% -> 0
+    value = _ZERO_UNIT_RE.sub("0", value)
+
+    return value
+
+
+def _normalize_declaration(decl):
+    """Normalize property:value whitespace and value."""
+    if ":" not in decl:
+        return decl.strip()
+    prop, val = decl.split(":", 1)
+    return f"{prop.strip()}:{_normalize_value(val)}"
+
+
+def _compress_sided(prop, parts):
+    """Collapse 1-4 identical sides to the shortest shorthand form."""
+    parts = [p.strip() for p in parts]
+    if len(parts) == 1:
+        return parts[0]
+    if len(parts) == 2 and parts[0] == parts[1]:
+        return parts[0]
+    if len(parts) == 4:
+        if parts[0] == parts[1] == parts[2] == parts[3]:
+            return parts[0]
+        if parts[0] == parts[2] and parts[1] == parts[3]:
+            return f"{parts[0]} {parts[1]}"
+        if parts[1] == parts[3]:
+            return f"{parts[0]} {parts[1]} {parts[2]}"
+    return " ".join(parts)
+
+
+def _compress_radius(parts):
+    """Collapse 1-4 identical radii."""
+    parts = [p.strip() for p in parts]
+    if len(parts) == 4 and parts[0] == parts[1] == parts[2] == parts[3]:
+        return parts[0]
+    if len(parts) == 2 and parts[0] == parts[1]:
+        return parts[0]
+    return " ".join(parts)
+
+
+def _rewrite_style_value(value):
+    """Normalize and shorthand-compress one inline style declaration block."""
+    # Normalize declarations.
+    decls = [_normalize_declaration(d) for d in value.split(";") if d.strip()]
+
+    # Group side-specific sub-properties for shorthand compression.
+    groups = {p: [None, None, None, None] for p in _SIDED_PROPS}
+    remaining = []
+    # Non-directional border longhands (border-width/style/color) that can become "border".
+    border_longhands = {"width": None, "style": None, "color": None}
+    for decl in decls:
+        if ":" not in decl:
+            remaining.append(decl)
+            continue
+        prop, val = decl.split(":", 1)
+        prop = prop.strip().lower()
+        val = val.strip()
+
+        # Non-directional border-* longhands.
+        if prop in ("border-width", "border-style", "border-color"):
+            border_longhands[prop[7:]] = val
+            continue
+
+        side = None
+        if prop.startswith("padding-"):
+            side = {"padding-top": 0, "padding-right": 1, "padding-bottom": 2, "padding-left": 3}.get(prop)
+            base = "padding"
+        elif prop.startswith("margin-"):
+            side = {"margin-top": 0, "margin-right": 1, "margin-bottom": 2, "margin-left": 3}.get(prop)
+            base = "margin"
+        elif prop.startswith("border-") and prop.endswith(("-width", "-style", "-color")):
+            side_map = {
+                "border-top": 0, "border-right": 1, "border-bottom": 2, "border-left": 3,
+            }
+            for prefix, idx in side_map.items():
+                if prop.startswith(prefix):
+                    side = idx
+                    break
+            if prop.endswith("-width"):
+                base = "border-width"
+            elif prop.endswith("-style"):
+                base = "border-style"
+            else:
+                base = "border-color"
+        else:
+            remaining.append(decl)
+            continue
+
+        if side is None:
+            remaining.append(decl)
+            continue
+        groups[base][side] = val
+
+    # Build shorthand declarations for sided properties.
+    shorthand = []
+    for prop, sides in groups.items():
+        if all(s is None for s in sides):
+            continue
+        # Fill missing sides by CSS shorthand rules:
+        # [top, right, bottom, left]; if only top set, all sides = top;
+        # if top+right set, bottom=top, left=right.
+        vals = list(sides)
+        if vals[1] is None:
+            vals[1] = vals[0]
+        if vals[2] is None:
+            vals[2] = vals[0]
+        if vals[3] is None:
+            vals[3] = vals[1]
+        shorthand.append(f"{prop}:{_compress_sided(prop, vals)}")
+
+    # Merge non-directional border-* longhands into a single "border" shorthand.
+    if all(border_longhands.values()):
+        shorthand.append(
+            f"border:{border_longhands['width']} {border_longhands['style']} {border_longhands['color']}"
+        )
+
+    # border-radius shorthand compression.
+    radius_parts = [None, None, None, None]
+    for decl in remaining:
+        prop, val = decl.split(":", 1)
+        pl = prop.strip().lower()
+        if pl == "border-top-left-radius":
+            radius_parts[0] = val.strip()
+        elif pl == "border-top-right-radius":
+            radius_parts[1] = val.strip()
+        elif pl == "border-bottom-right-radius":
+            radius_parts[2] = val.strip()
+        elif pl == "border-bottom-left-radius":
+            radius_parts[3] = val.strip()
+    if any(r is not None for r in radius_parts):
+        if radius_parts[1] is None:
+            radius_parts[1] = radius_parts[0]
+        if radius_parts[2] is None:
+            radius_parts[2] = radius_parts[0]
+        if radius_parts[3] is None:
+            radius_parts[3] = radius_parts[1]
+        remaining = [d for d in remaining if not d.split(":", 1)[0].strip().lower().startswith("border-")]
+        remaining.append(f"border-radius:{_compress_radius(radius_parts)}")
+
+    result = ";".join(remaining + shorthand)
+    # Collapse whitespace after colon once more.
+    result = _DECL_WS_RE.sub(":", result)
+    return result
 
 
 def minify_email_html(html):
@@ -193,7 +397,7 @@ def relocate_tracking_pixel(html, pixel_html=None):
     return _as_same_type(html, text_new)
 
 
-def strip_dead_classes(html, allowlist=DEFAULT_CLASS_ALLOWLIST):
+def strip_dead_classes(html, allowlist=DEFAULT_CLASS_ALLOWLIST, shipped_style_css=None):
     """Remove class tokens not referenced by any surviving <style>/comment rule.
 
     After CSS inlining, most ``class`` attributes are dead weight: the styling
@@ -202,10 +406,14 @@ def strip_dead_classes(html, allowlist=DEFAULT_CLASS_ALLOWLIST):
     Outlook ``[if mso]`` markup still do anything. We keep exactly those (plus
     an allowlist) and drop the rest.
 
-    Safe direction: the keep-set is an *over*-approximation (any ``.token`` seen
-    in a ``<style>`` or comment is kept), so we never remove a class a surviving
-    rule needs. Markup inside protected regions (incl. ``[if mso]`` comments) is
-    never rewritten. Idempotent.
+    ``shipped_style_css`` is optional. When provided, the keep-set is built from
+    the CSS text that actually ships with the email (e.g. the head
+    ``mass_mailing_mail.scss``). This is more aggressive than scanning every
+    ``<style>`` element in the body, because the inliner injects many rules that
+    only matter inside the editor iframe.
+
+    Markup inside protected regions (incl. ``[if mso]`` comments) is never
+    rewritten. Idempotent.
     """
     if not html:
         return html
@@ -213,12 +421,22 @@ def strip_dead_classes(html, allowlist=DEFAULT_CLASS_ALLOWLIST):
     protected_text, regions = _protect_regions(text)
 
     keep = set(allowlist or ())
-    for chunk in regions:
-        # Only <style> blocks and comments can carry class references we must honour.
-        if chunk[:6].lower() == "<style" or chunk[:4] == "<!--":
-            keep.update(m.group(1) for m in _CSS_CLASS_TOKEN_RE.finditer(chunk))
-            for m in _ATTR_CLASS_SEL_RE.finditer(chunk):
-                keep.update(m.group(1).split())
+    if shipped_style_css:
+        keep.update(m.group(1) for m in _CSS_CLASS_TOKEN_RE.finditer(shipped_style_css))
+        for m in _ATTR_CLASS_SEL_RE.finditer(shipped_style_css):
+            keep.update(m.group(1).split())
+        # Also scan [if mso] <style> blocks inside comments.
+        for chunk in regions:
+            if chunk.startswith("<!--") and "[if" in chunk.lower():
+                keep.update(m.group(1) for m in _CSS_CLASS_TOKEN_RE.finditer(chunk))
+                for m in _ATTR_CLASS_SEL_RE.finditer(chunk):
+                    keep.update(m.group(1).split())
+    else:
+        for chunk in regions:
+            if chunk[:6].lower() == "<style" or chunk[:4] == "<!--":
+                keep.update(m.group(1) for m in _CSS_CLASS_TOKEN_RE.finditer(chunk))
+                for m in _ATTR_CLASS_SEL_RE.finditer(chunk):
+                    keep.update(m.group(1).split())
 
     def _rewrite(match):
         leading, quote, value = match.group(1), match.group(2), match.group(3)
@@ -231,11 +449,107 @@ def strip_dead_classes(html, allowlist=DEFAULT_CLASS_ALLOWLIST):
     return _as_same_type(html, _restore_regions(protected_text, regions))
 
 
-def apply_pipeline(html, flags, allowlist=DEFAULT_CLASS_ALLOWLIST):
+def normalize_css_values(html):
+    """Normalize CSS values inside inline ``style=`` and ``<style>`` blocks.
+
+    Rewrites rgb() to named colors, shortens hex colors, strips trailing zeros
+    from pixel values, and converts ``0px``/``0em``/``0%`` to ``0``.
+    """
+    if not html:
+        return html
+    text = str(html)
+
+    # Process <style> blocks first, before protecting regions, so we actually
+    # touch their CSS content.
+    def _rewrite_style_block(match):
+        open_tag, css, close_tag = match.group(1), match.group(2), match.group(3)
+        css = css.replace("\n", " ")
+        css = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
+        css = re.sub(r"\s*([{}:;,])\s*", r"\1", css)
+        css = _RGBA_RE.sub("transparent", css)
+
+        def _rgb_sub(m):
+            rgb = tuple(int(m.group(i)) for i in range(1, 4))
+            return _RGB_NAMED.get(rgb, m.group(0))
+
+        css = _RGB_RE.sub(_rgb_sub, css)
+        css = _HEX_LONG_RE.sub(r"#\1\2\3", css)
+        css = _FLOAT_PX_RE.sub(r"\1\2", css)
+        css = _ZERO_UNIT_RE.sub("0", css)
+        css = re.sub(r";+", ";", css)
+        return f"{open_tag}{css.strip()}{close_tag}"
+
+    text = _STYLE_BLOCK_RE.sub(_rewrite_style_block, text)
+
+    # Now protect pre/textarea/script/conditional comments and process inline styles.
+    protected_text, regions = _protect_regions(text)
+
+    def _rewrite_style(match):
+        leading, quote, value = match.group(1), match.group(2), match.group(3)
+        new_value = _rewrite_style_value(value)
+        if not new_value:
+            return ""
+        return f"{leading}style={quote}{new_value}{quote}"
+
+    protected_text = _STYLE_ATTR_RE.sub(_rewrite_style, protected_text)
+    return _as_same_type(html, _restore_regions(protected_text, regions))
+
+
+def compress_shorthands(html):
+    """Compress verbose longhand padding/margin/border-* declarations.
+
+    Converts ``padding: 10px 10px 10px 10px`` to ``padding: 10px`` and similar
+    for margin/border-width/border-style/border-color. Also collapses
+    ``border-*`` longhands into a single ``border`` shorthand when all three
+    width/style/color are present, and compresses
+    ``border-radius`` longhands. Inline ``style=`` attributes only.
+    """
+    if not html:
+        return html
+    text = str(html)
+    protected_text, regions = _protect_regions(text)
+
+    def _rewrite(match):
+        leading, quote, value = match.group(1), match.group(2), match.group(3)
+        new_value = _rewrite_style_value(value)
+        if not new_value:
+            return ""
+        return f"{leading}style={quote}{new_value}{quote}"
+
+    protected_text = _STYLE_ATTR_RE.sub(_rewrite, protected_text)
+    return _as_same_type(html, _restore_regions(protected_text, regions))
+
+
+def minify_style_blocks(html):
+    """Remove comments/whitespace from ``<style>`` block contents.
+
+    Leaves conditional comments untouched. This is a lightweight minification;
+    SCSS comments (``//``) are already compiled away by the time the CSS is
+    injected into the email.
+    """
+    if not html:
+        return html
+    text = str(html)
+
+    def _rewrite(match):
+        open_tag, css, close_tag = match.group(1), match.group(2), match.group(3)
+        css = css.replace("\n", " ")
+        css = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
+        css = re.sub(r"\s*([{}:;,])\s*", r"\1", css)
+        css = re.sub(r";+", ";", css)
+        return f"{open_tag}{css.strip()}{close_tag}"
+
+    text = _STYLE_BLOCK_RE.sub(_rewrite, text)
+    # Restore/protect nothing else; inline styles are left untouched by design.
+    return _as_same_type(html, text)
+
+
+def apply_pipeline(html, flags, allowlist=DEFAULT_CLASS_ALLOWLIST, shipped_style_css=None):
     """Apply the whole server-side slim pipeline to ``html``.
 
     ``flags`` is a dict with the same keys used by the model override:
-    ``move_pixel``, ``strip_classes``, ``trim_defaults``, ``minify``.
+    ``move_pixel``, ``strip_classes``, ``trim_defaults``, ``minify``,
+    ``normalize_css``, ``compress_shorthands``, ``minify_style_blocks``.
     Used both at send time and by ``mailing.email_size_kb`` so the editor
     warning reflects the size that will actually be sent.
     """
@@ -245,9 +559,15 @@ def apply_pipeline(html, flags, allowlist=DEFAULT_CLASS_ALLOWLIST):
     if flags.get("move_pixel"):
         body = relocate_tracking_pixel(body)
     if flags.get("strip_classes"):
-        body = strip_dead_classes(body, allowlist=allowlist)
+        body = strip_dead_classes(body, allowlist=allowlist, shipped_style_css=shipped_style_css)
     if flags.get("trim_defaults"):
         body = trim_redundant_inline_defaults(body)
+    if flags.get("normalize_css"):
+        body = normalize_css_values(body)
+    if flags.get("compress_shorthands"):
+        body = compress_shorthands(body)
+    if flags.get("minify_style_blocks"):
+        body = minify_style_blocks(body)
     if flags.get("minify"):
         body = minify_email_html(body)
     return body
@@ -286,3 +606,50 @@ def trim_redundant_inline_defaults(html):
 
     protected_text = _STYLE_ATTR_RE.sub(_rewrite, protected_text)
     return _as_same_type(html, _restore_regions(protected_text, regions))
+
+
+def diagnose_bloat(html, top_n=10):
+    """Return a dict showing where bytes are spent in ``html``.
+
+    Non-mutating. Useful for understanding why a particular mailing is still
+    large after slimming.
+    """
+    if not html:
+        return {
+            "total_bytes": 0,
+            "inline_style_bytes": 0,
+            "class_attr_bytes": 0,
+            "style_block_bytes": 0,
+            "top_inline_styles": [],
+            "top_classes": [],
+        }
+    text = str(html)
+    total = len(text.encode("utf-8"))
+
+    inline_style_bytes = 0
+    style_counter = Counter()
+    for m in _STYLE_ATTR_RE.finditer(text):
+        val = m.group(3)
+        inline_style_bytes += len(val)
+        style_counter[val] += 1
+
+    class_attr_bytes = 0
+    class_counter = Counter()
+    for m in _CLASS_ATTR_RE.finditer(text):
+        val = m.group(3)
+        class_attr_bytes += len(val)
+        for tok in val.split():
+            class_counter[tok] += 1
+
+    style_block_bytes = 0
+    for m in _STYLE_BLOCK_RE.finditer(text):
+        style_block_bytes += len(m.group(2))
+
+    return {
+        "total_bytes": total,
+        "inline_style_bytes": inline_style_bytes,
+        "class_attr_bytes": class_attr_bytes,
+        "style_block_bytes": style_block_bytes,
+        "top_inline_styles": style_counter.most_common(top_n),
+        "top_classes": class_counter.most_common(top_n),
+    }
