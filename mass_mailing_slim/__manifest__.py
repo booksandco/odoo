@@ -1,7 +1,7 @@
 # Part of the booksandco custom addons. See LICENSE.
 {
     'name': 'Mass Mailing Slim',
-    'version': '19.0.1.3.1',
+    'version': '19.0.1.4.0',
     'category': 'Marketing',
     'summary': 'Shrink Email Marketing HTML below Gmail\'s 102 KB clip limit',
     'description': """
@@ -23,10 +23,10 @@ never modify Odoo core. See ``PLAN.md`` for the full design.
         'mass_mailing',
     ],
     'data': [
-        'data/config_params.xml',
         'views/res_config_settings_views.xml',
         'views/mailing_views.xml',
     ],
+    'post_init_hook': 'post_init_hook',
     'license': 'OEEL-1',
     'author': 'Harry Bird',
     'installable': True,
