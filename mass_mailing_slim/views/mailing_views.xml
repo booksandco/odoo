@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="mailing_mailing_view_form_slim" model="ir.ui.view">
+        <field name="name">mailing.mailing.form.slim.warning</field>
+        <field name="model">mailing.mailing</field>
+        <field name="inherit_id" ref="mass_mailing.view_mail_mass_mailing_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form[@class='o_mass_mailing_mailing_form']/header" position="after">
+                <div class="alert alert-warning" role="alert" invisible="not email_size_warning">
+                    <field name="email_size_warning" invisible="1"/>
+                    <i class="fa fa-exclamation-triangle me-1" role="img" aria-label="Warning" title="Warning"/>
+                    <span>This email is about </span>
+                    <field name="email_size_kb" class="oe_inline" readonly="1"/>
+                    <span> KB. Gmail clips messages over ~102 KB, hiding content and breaking open tracking. Consider removing snippets or heavy images.</span>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>
