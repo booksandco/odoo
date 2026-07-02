@@ -1,7 +1,7 @@
 # Part of the booksandco custom addons. See LICENSE.
 {
     'name': 'Mass Mailing Slim',
-    'version': '19.0.1.2.0',
+    'version': '19.0.1.3.0',
     'category': 'Marketing',
     'summary': 'Shrink Email Marketing HTML below Gmail\'s 102 KB clip limit',
     'description': """
@@ -18,9 +18,6 @@ Gmail's ~102 KB clipping threshold, and fixes two related defects:
 
 All transforms run server-side, are gated by ``ir.config_parameter`` flags, and
 never modify Odoo core. See ``PLAN.md`` for the full design.
-
-NOTE: this is a no-op scaffold. The transform logic in ``tools/html_slim.py``
-and the model overrides are stubs until implemented.
 """,
     'depends': [
         'mass_mailing',

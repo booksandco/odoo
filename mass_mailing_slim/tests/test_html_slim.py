@@ -123,10 +123,11 @@ class TestHtmlSlim(common.TransactionCase):
         shipped = ".shipped_ref { width: 100%; }"
         out = html_slim.strip_dead_classes(html, shipped_style_css=shipped)
         self.assertIn('shipped_ref', out)
-        self.assertNotIn('editor_only', out)
-        # The body <style> block is left untouched by strip_dead_classes, but the
-        # class was removed from the element's @class attribute.
+        # The body <style> block is left untouched by strip_dead_classes (so the
+        # literal ".editor_only" rule survives there), but the dead class was
+        # removed from the element's @class attribute.
         self.assertIn("<div class='shipped_ref'>", out)
+        self.assertNotIn("editor_only shipped_ref", out)
 
     # -- aggressive: trim redundant inline defaults ----------------------------
 
@@ -184,7 +185,7 @@ class TestHtmlSlim(common.TransactionCase):
     def test_normalize_style_block(self):
         html = "<style>.a { color: rgb(0, 0, 255); }\n.b { margin: 0px; }\u003c/style>"
         out = html_slim.normalize_css_values(html)
-        self.assertIn("color:navy", out)
+        self.assertIn("color:blue", out)  # rgb(0,0,255) is blue; navy is rgb(0,0,128)
         self.assertIn("margin:0", out)
 
     # -- compression: shorthand compression -----------------------------------
@@ -217,6 +218,75 @@ class TestHtmlSlim(common.TransactionCase):
         self.assertNotIn("comment", out)
         self.assertNotIn("\n", out)
         self.assertIn(".a{color:red;}", out)
+
+    # -- compression: strip inherited inline declarations ---------------------
+
+    _SHIPPED = ".o_layout { font-family: Arial,Helvetica Neue,Helvetica,sans-serif; }"
+
+    def test_strip_inherited_drops_matching_font_family(self):
+        html = (
+            '<div style="font-family:Arial,Helvetica Neue,Helvetica,sans-serif;'
+            'color:#333">Hi</div>'
+        )
+        out = html_slim.strip_inherited_declarations(html, shipped_style_css=self._SHIPPED)
+        self.assertNotIn("font-family", out)
+        self.assertIn("color:#333", out)  # non-inherited declaration kept
+
+    def test_strip_inherited_handles_computed_quotes_and_spaces(self):
+        # getComputedStyle re-quotes multi-word families and adds spaces.
+        html = (
+            '<td style=\'font-family: Arial, "Helvetica Neue", Helvetica, sans-serif\'>Hi</td>'
+        )
+        out = html_slim.strip_inherited_declarations(html, shipped_style_css=self._SHIPPED)
+        self.assertNotIn("font-family", out)
+        self.assertNotIn("style=", out)  # became empty, whole attribute dropped
+
+    def test_strip_inherited_handles_entity_escaped_quotes(self):
+        # The serialized style="" attribute escapes inner quotes as &quot;,
+        # which end in ';' and must not break declaration splitting.
+        html = (
+            '<td style="font-family:Arial, &quot;Helvetica Neue&quot;, Helvetica, sans-serif;'
+            'color:#454748">Hi</td>'
+        )
+        out = html_slim.strip_inherited_declarations(html, shipped_style_css=self._SHIPPED)
+        self.assertNotIn("font-family", out)
+        self.assertNotIn("&quot;", out)
+        self.assertIn("color:#454748", out)
+
+    def test_strip_inherited_keeps_different_font(self):
+        html = '<div style="font-family:Georgia,serif">Hi</div>'
+        out = html_slim.strip_inherited_declarations(html, shipped_style_css=self._SHIPPED)
+        self.assertIn("font-family:Georgia,serif", out)
+
+    def test_strip_inherited_noop_without_shipped_css(self):
+        html = '<div style="font-family:Arial,Helvetica Neue,Helvetica,sans-serif">Hi</div>'
+        self.assertEqual(html_slim.strip_inherited_declarations(html), html)
+
+    def test_strip_inherited_explicit_map(self):
+        html = '<div style="color:#3AADAA;font-size:14px">Hi</div>'
+        out = html_slim.strip_inherited_declarations(
+            html, inherited_map={"color": {"#3aadaa"}}
+        )
+        self.assertNotIn("color", out)
+        self.assertIn("font-size:14px", out)
+
+    def test_strip_inherited_protects_mso_comment(self):
+        html = (
+            '<!--[if mso]><div style="font-family:Arial,Helvetica Neue,Helvetica,sans-serif">x</div><![endif]-->'
+            '<div style="font-family:Arial,Helvetica Neue,Helvetica,sans-serif">y</div>'
+        )
+        out = html_slim.strip_inherited_declarations(html, shipped_style_css=self._SHIPPED)
+        # The declaration inside the [if mso] comment must survive.
+        self.assertEqual(out.count("font-family"), 1)
+        self.assertIn("[if mso]", out)
+
+    def test_strip_inherited_markupsafe_preserved(self):
+        import markupsafe
+        out = html_slim.strip_inherited_declarations(
+            markupsafe.Markup('<div style="font-family:Arial,Helvetica Neue,Helvetica,sans-serif">x</div>'),
+            shipped_style_css=self._SHIPPED,
+        )
+        self.assertIsInstance(out, markupsafe.Markup)
 
     # -- pipeline --------------------------------------------------------------
 

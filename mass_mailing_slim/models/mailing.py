@@ -34,6 +34,7 @@ class MailingMailing(models.Model):
             "normalize_css": icp.get_param("mass_mailing_slim.normalize_css", "False") == "True",
             "compress_shorthands": icp.get_param("mass_mailing_slim.compress_shorthands", "False") == "True",
             "minify_style_blocks": icp.get_param("mass_mailing_slim.minify_style_blocks", "False") == "True",
+            "strip_inherited": icp.get_param("mass_mailing_slim.strip_inherited", "False") == "True",
         }
 
     def _mass_mailing_slim_allowlist(self):

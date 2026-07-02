@@ -90,6 +90,21 @@ _BORDER_STYLE_SET_RE = re.compile(
 # <style> block extraction (captures full element).
 _STYLE_BLOCK_RE = re.compile(r"(<style\b[^>]*>)(.*?)(</style\s*>)", re.IGNORECASE | re.DOTALL)
 
+# Extract simple property:value from CSS text (for inherited declarations).
+_CSS_DECL_RE = re.compile(r"([\w\-]+)\s*:\s*([^;{}]+)")
+# Quotes stripped when comparing CSS values: getComputedStyle re-quotes
+# multi-word font families (``Arial, "Helvetica Neue", ...``) so the inline
+# value would otherwise never match the unquoted shipped ``.o_layout`` value.
+# The serialized ``style="..."`` attribute escapes those inner quotes as HTML
+# entities, so we strip both the literal and entity forms.
+_CSS_QUOTE_RE = re.compile(r"""['"]|&quot;|&\#34;|&apos;|&\#39;""", re.IGNORECASE)
+# HTML entities (``&quot;``, ``&#34;`` ...) also end in ';', so a naive
+# ``value.split(';')`` on an inline style value splits *inside* the entity and
+# mangles the declaration. Protect entities before splitting.
+_ENTITY_RE = re.compile(r"&(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#[xX][0-9a-fA-F]+);")
+_DECL_SENTINEL = "\x01{}\x01"
+_DECL_SENTINEL_RE = re.compile(r"\x01(\d+)\x01")
+
 # CSS value normalization.
 _RGB_NAMED = {
     (0, 0, 0): "black",
@@ -131,6 +146,38 @@ def _as_same_type(original, text):
 def _is_conditional_comment(comment):
     low = comment.lower()
     return "[if" in low or "endif" in low
+
+
+def _norm_css_match(value):
+    """Normalize a CSS value for equality comparison.
+
+    Lowercases, drops all whitespace and quotes so that an inline value like
+    ``Arial, "Helvetica Neue", Helvetica, sans-serif`` compares equal to the
+    unquoted ``Arial,Helvetica Neue,Helvetica,sans-serif`` from the shipped CSS.
+    """
+    return _CSS_QUOTE_RE.sub("", re.sub(r"\s+", "", value.strip())).lower()
+
+
+def _split_declarations(value):
+    """Split an inline style value on ';' without breaking HTML entities.
+
+    ``&quot;``/``&#34;`` and friends end in ';', so a plain ``split(';')`` would
+    cut a ``font-family:...&quot;Helvetica Neue&quot;...`` declaration into
+    fragments. We stash entities behind sentinels, split, then restore.
+    """
+    holders = []
+
+    def _hold(m):
+        holders.append(m.group(0))
+        return _DECL_SENTINEL.format(len(holders) - 1)
+
+    protected = _ENTITY_RE.sub(_hold, value)
+    parts = protected.split(";")
+    if not holders:
+        return parts
+    return [
+        _DECL_SENTINEL_RE.sub(lambda m: holders[int(m.group(1))], p) for p in parts
+    ]
 
 
 def _protect_regions(text):
@@ -214,7 +261,7 @@ def _compress_radius(parts):
 def _rewrite_style_value(value):
     """Normalize and shorthand-compress one inline style declaration block."""
     # Normalize declarations.
-    decls = [_normalize_declaration(d) for d in value.split(";") if d.strip()]
+    decls = [_normalize_declaration(d) for d in _split_declarations(value) if d.strip()]
 
     # Group side-specific sub-properties for shorthand compression.
     groups = {p: [None, None, None, None] for p in _SIDED_PROPS}
@@ -281,11 +328,17 @@ def _rewrite_style_value(value):
             vals[3] = vals[1]
         shorthand.append(f"{prop}:{_compress_sided(prop, vals)}")
 
-    # Merge non-directional border-* longhands into a single "border" shorthand.
+    # Merge non-directional border-* longhands into a single "border" shorthand
+    # only when all three are present; otherwise keep whichever were set so we
+    # never silently drop a declaration (e.g. a lone ``border-color``).
     if all(border_longhands.values()):
         shorthand.append(
             f"border:{border_longhands['width']} {border_longhands['style']} {border_longhands['color']}"
         )
+    else:
+        for name, val in border_longhands.items():
+            if val is not None:
+                shorthand.append(f"border-{name}:{val}")
 
     # border-radius shorthand compression.
     radius_parts = [None, None, None, None]
@@ -549,7 +602,8 @@ def apply_pipeline(html, flags, allowlist=DEFAULT_CLASS_ALLOWLIST, shipped_style
 
     ``flags`` is a dict with the same keys used by the model override:
     ``move_pixel``, ``strip_classes``, ``trim_defaults``, ``minify``,
-    ``normalize_css``, ``compress_shorthands``, ``minify_style_blocks``.
+    ``normalize_css``, ``compress_shorthands``, ``minify_style_blocks``,
+    ``strip_inherited``.
     Used both at send time and by ``mailing.email_size_kb`` so the editor
     warning reflects the size that will actually be sent.
     """
@@ -560,6 +614,8 @@ def apply_pipeline(html, flags, allowlist=DEFAULT_CLASS_ALLOWLIST, shipped_style
         body = relocate_tracking_pixel(body)
     if flags.get("strip_classes"):
         body = strip_dead_classes(body, allowlist=allowlist, shipped_style_css=shipped_style_css)
+    if flags.get("strip_inherited"):
+        body = strip_inherited_declarations(body, shipped_style_css=shipped_style_css)
     if flags.get("trim_defaults"):
         body = trim_redundant_inline_defaults(body)
     if flags.get("normalize_css"):
@@ -571,6 +627,78 @@ def apply_pipeline(html, flags, allowlist=DEFAULT_CLASS_ALLOWLIST, shipped_style
     if flags.get("minify"):
         body = minify_email_html(body)
     return body
+
+
+def strip_inherited_declarations(html, shipped_style_css=None, inherited_map=None):
+    """Remove inline declarations that match inherited/shipped default values.
+
+    ``font-family``, ``color``, ``line-height`` and ``font-size`` are inherited
+    by default in CSS. The JS inliner stamps the same value onto hundreds of
+    elements even though a parent (``body``, ``.o_layout``) already sets it.
+    This transform strips those redundant declarations.
+
+    ``inherited_map`` is ``{property: {value1, value2, ...}}``. When omitted, it
+    is auto-built from ``shipped_style_css`` by looking at rules for
+    ``.o_layout``, ``body`` and ``*`` selectors.
+    """
+    if not html:
+        return html
+    if inherited_map is None:
+        inherited_map = _build_inherited_map(shipped_style_css or "")
+    if not inherited_map:
+        return html
+
+    text = str(html)
+    protected_text, regions = _protect_regions(text)
+
+    def _rewrite(match):
+        leading, quote, value = match.group(1), match.group(2), match.group(3)
+        kept = []
+        for decl in _split_declarations(value):
+            if not decl.strip():
+                continue
+            if ":" not in decl:
+                kept.append(decl.strip())
+                continue
+            prop, val = decl.split(":", 1)
+            prop = prop.strip().lower()
+            val_norm = _norm_css_match(val)
+            drop_values = {_norm_css_match(v) for v in inherited_map.get(prop, ())}
+            if val_norm in drop_values:
+                continue
+            kept.append(decl.strip())
+        if not kept:
+            return ""
+        return f"{leading}style={quote}{';'.join(kept)}{quote}"
+
+    protected_text = _STYLE_ATTR_RE.sub(_rewrite, protected_text)
+    return _as_same_type(html, _restore_regions(protected_text, regions))
+
+
+def _build_inherited_map(css_text):
+    """Build {property: {values}} for inherited declarations set at root level.
+
+    We look at selectors that establish defaults for the whole email:
+    ``.o_layout``, ``body``, ``body:has(.o_layout)``, ``*`` and ``html``.
+    Only inherited properties are collected (font-family, color, line-height,
+    font-size, text-align).
+    """
+    inherited_props = {"font-family", "color", "line-height", "font-size", "text-align"}
+    result = {p: set() for p in inherited_props}
+    # Strip comments, then split into rough rule blocks.
+    css = re.sub(r"/\*.*?\*/", "", css_text, flags=re.DOTALL)
+    # Match rule blocks.
+    for block in re.finditer(r"([^{}]+)\{([^}]*)\}", css, flags=re.DOTALL):
+        selector = block.group(1).strip()
+        # Only consider selectors that apply broadly to the email wrapper.
+        if not any(selector.startswith(s) or (" " + s) in selector for s in (".o_layout", "body", "html", "*")):
+            continue
+        for m in _CSS_DECL_RE.finditer(block.group(2)):
+            prop = m.group(1).strip().lower()
+            if prop in inherited_props:
+                result[prop].add(m.group(2).strip())
+    # Remove empty sets.
+    return {k: v for k, v in result.items() if v}
 
 
 def trim_redundant_inline_defaults(html):
@@ -589,7 +717,7 @@ def trim_redundant_inline_defaults(html):
         leading, quote, value = match.group(1), match.group(2), match.group(3)
         has_border = bool(_BORDER_STYLE_SET_RE.search(value))
         kept = []
-        for decl in value.split(";"):
+        for decl in _split_declarations(value):
             if not decl.strip():
                 continue
             norm = re.sub(r"\s+", "", decl).lower()

@@ -52,6 +52,12 @@ class ResConfigSettings(models.TransientModel):
         config_parameter="mass_mailing_slim.minify_style_blocks",
         help="Remove comments and whitespace from CSS blocks shipped in the email.",
     )
+    mass_mailing_slim_strip_inherited = fields.Boolean(
+        string="Strip Inherited Inline Declarations",
+        config_parameter="mass_mailing_slim.strip_inherited",
+        help="Drop inline font-family/etc. that merely repeat the value already "
+             "set on .o_layout and inherited by every descendant.",
+    )
     mass_mailing_slim_warn_kb = fields.Integer(
         string="Size Warning Threshold (KB)",
         config_parameter="mass_mailing_slim.warn_kb",

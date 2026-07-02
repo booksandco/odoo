@@ -51,6 +51,11 @@
                              invisible="not mass_mailing_slim_enabled">
                         <field name="mass_mailing_slim_minify_style_blocks"/>
                     </setting>
+                    <setting string="Strip inherited inline declarations"
+                             help="Drop inline font-family that merely repeats the value already set on .o_layout and inherited by every descendant."
+                             invisible="not mass_mailing_slim_enabled">
+                        <field name="mass_mailing_slim_strip_inherited"/>
+                    </setting>
                     <setting string="Size warning threshold (KB)"
                              help="Warn in the editor when the email HTML exceeds this size.">
                         <field name="mass_mailing_slim_warn_kb"/>

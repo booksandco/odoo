@@ -42,6 +42,10 @@
             <field name="key">mass_mailing_slim.minify_style_blocks</field>
             <field name="value">False</field>
         </record>
+        <record id="param_slim_strip_inherited" model="ir.config_parameter">
+            <field name="key">mass_mailing_slim.strip_inherited</field>
+            <field name="value">False</field>
+        </record>
         <record id="param_slim_warn_kb" model="ir.config_parameter">
             <field name="key">mass_mailing_slim.warn_kb</field>
             <field name="value">100</field>
