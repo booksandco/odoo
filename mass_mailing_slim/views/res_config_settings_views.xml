@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.mass_mailing_slim</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="mass_mailing.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@name='managa_mail_campaigns_setting_container']" position="after">
+                <block title="Email Size (Slim)" name="mass_mailing_slim_setting_container">
+                    <setting string="Slim outgoing mailings"
+                             help="Post-process newsletter HTML to reduce size and avoid Gmail clipping (~102 KB limit).">
+                        <field name="mass_mailing_slim_enabled"/>
+                    </setting>
+                    <setting string="Minify HTML"
+                             help="Collapse template indentation and drop non-Outlook comments."
+                             invisible="not mass_mailing_slim_enabled">
+                        <field name="mass_mailing_slim_minify"/>
+                    </setting>
+                    <setting string="Clean plain-text part"
+                             help="Strip CSS from the text/plain alternative."
+                             invisible="not mass_mailing_slim_enabled">
+                        <field name="mass_mailing_slim_fix_plaintext"/>
+                    </setting>
+                    <setting string="Move tracking pixel to top"
+                             help="Keep open tracking working even if Gmail clips the email."
+                             invisible="not mass_mailing_slim_enabled">
+                        <field name="mass_mailing_slim_move_pixel"/>
+                    </setting>
+                    <setting string="Strip dead CSS classes"
+                             help="Remove class attributes not used by the CSS that ships with the email."
+                             invisible="not mass_mailing_slim_enabled">
+                        <field name="mass_mailing_slim_strip_classes"/>
+                    </setting>
+                    <setting string="Trim redundant inline defaults"
+                             help="Drop no-op declarations (box-sizing/border-radius:0) injected on every element."
+                             invisible="not mass_mailing_slim_enabled">
+                        <field name="mass_mailing_slim_trim_defaults"/>
+                    </setting>
+                    <setting string="Normalize CSS values"
+                             help="Shorten rgb() colors, hex values, and 0px units in inline styles."
+                             invisible="not mass_mailing_slim_enabled">
+                        <field name="mass_mailing_slim_normalize_css"/>
+                    </setting>
+                    <setting string="Compress shorthand properties"
+                             help="Collapse padding/margin/border longhands into shorter shorthands."
+                             invisible="not mass_mailing_slim_enabled">
+                        <field name="mass_mailing_slim_compress_shorthands"/>
+                    </setting>
+                    <setting string="Minify &lt;style&gt; blocks"
+                             help="Remove comments and whitespace from CSS blocks shipped in the email."
+                             invisible="not mass_mailing_slim_enabled">
+                        <field name="mass_mailing_slim_minify_style_blocks"/>
+                    </setting>
+                    <setting string="Strip inherited inline declarations"
+                             help="Drop inline font-family that merely repeats the value already set on .o_layout and inherited by every descendant."
+                             invisible="not mass_mailing_slim_enabled">
+                        <field name="mass_mailing_slim_strip_inherited"/>
+                    </setting>
+                    <setting string="Size warning threshold (KB)"
+                             help="Warn in the editor when the email HTML exceeds this size.">
+                        <field name="mass_mailing_slim_warn_kb"/>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>
