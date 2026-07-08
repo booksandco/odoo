@@ -754,44 +754,66 @@ class ProductTemplate(models.Model):
                     break
 
         # Author
-        if descriptive is not None and (force or not self.x_author):
+        if descriptive is not None and (force or not self.author_line_ids):
             authors = []
+            author_records = []
+            seen_norms = set()
             for contrib in _findall(descriptive, 'Contributor'):
                 role = _find(contrib, 'ContributorRole')
                 if role is None or role.text != 'A01':
                     continue
                 name_el = _find(contrib, 'PersonName')
+                author_name = None
                 if name_el is not None and name_el.text:
-                    authors.append(name_el.text)
+                    author_name = name_el.text
+                else:
+                    # Fall back to PersonNameInverted ("Last, First" -> "First Last")
+                    inverted = _find(contrib, 'PersonNameInverted')
+                    if inverted is not None and inverted.text:
+                        parts = [p.strip() for p in inverted.text.split(',', 1)]
+                        author_name = ' '.join(reversed(parts)) if len(parts) == 2 else inverted.text
+                    else:
+                        # Fall back to NamesBeforeKey + KeyNames
+                        before = _find(contrib, 'NamesBeforeKey')
+                        key = _find(contrib, 'KeyNames')
+                        if key is not None and key.text:
+                            author_name = f"{before.text} {key.text}" if before is not None and before.text else key.text
+                if not author_name:
                     continue
-                # Fall back to PersonNameInverted ("Last, First" -> "First Last")
-                inverted = _find(contrib, 'PersonNameInverted')
-                if inverted is not None and inverted.text:
-                    parts = [p.strip() for p in inverted.text.split(',', 1)]
-                    authors.append(' '.join(reversed(parts)) if len(parts) == 2 else inverted.text)
+                norm = author_name.lower()
+                if norm in seen_norms:
                     continue
-                # Fall back to NamesBeforeKey + KeyNames
-                before = _find(contrib, 'NamesBeforeKey')
-                key = _find(contrib, 'KeyNames')
-                if key is not None and key.text:
-                    full = f"{before.text} {key.text}" if before is not None and before.text else key.text
-                    authors.append(full)
+                seen_norms.add(norm)
+                authors.append(author_name)
+                author_rec = self.env['bookstore.author']._hardcover_get_or_create(author_name, False)
+                if author_rec:
+                    author_records.append(author_rec)
             if authors:
                 vals['x_author'] = ', '.join(authors)
+            if author_records:
+                vals['author_line_ids'] = [
+                    fields.Command.clear(),
+                ] + [
+                    fields.Command.create({
+                        'author_id': author.id,
+                        'sequence': idx,
+                    })
+                    for idx, author in enumerate(author_records)
+                ]
 
         # Publisher (prefer imprint over publisher)
-        # NOTE: we only set the Char display value here. The publisher
-        # relation (x_publisher_id) is populated from Hardcover so it
-        # matches Hardcover's canonical grouping and avoids mismatches
-        # with Titlepage distributor/imprint names.
-        if publishing is not None and (force or not self.x_publisher):
+        if publishing is not None and (force or not self.x_publisher_id):
             imprint_el = _find(publishing, 'Imprint/ImprintName')
-            if imprint_el is not None and imprint_el.text:
-                vals['x_publisher'] = imprint_el.text
-            else:
+            publisher_name = imprint_el.text if imprint_el is not None and imprint_el.text else None
+            if not publisher_name:
                 publisher_el = _find(publishing, 'Publisher/PublisherName')
                 if publisher_el is not None and publisher_el.text:
-                    vals['x_publisher'] = publisher_el.text
+                    publisher_name = publisher_el.text
+            if publisher_name:
+                publisher_rec = self.env['bookstore.publisher']._hardcover_get_or_create(publisher_name, False)
+                if publisher_rec:
+                    vals['x_publisher'] = publisher_name
+                    vals['x_publisher_id'] = publisher_rec.id
 
         # Publication date (role 01 = publication date)
         if publishing is not None and (force or not self.x_publication_date):
