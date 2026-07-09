@@ -90,8 +90,8 @@ class VendorReturnOrder(models.Model):
 
     def action_confirm(self):
         for order in self:
-            if order.state != 'draft':
-                raise UserError(_("Only draft return orders can be confirmed."))
+            if order.state != 'sent':
+                raise UserError(_("Only sent return orders can be confirmed."))
         self.write({'state': 'confirmed'})
 
     def action_generate_picks(self):
