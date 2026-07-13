@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<odoo>
+    <record id="automation_product_template_updated" model="base.automation">
+        <field name="name">BookHub: product updated</field>
+        <field name="model_id" ref="product.model_product_template"/>
+        <field name="trigger">on_create_or_write</field>
+        <field name="trigger_field_ids" eval="[
+            (6, 0, [
+                ref('product.field_product_template__name'),
+                ref('product.field_product_template__default_code'),
+                ref('product.field_product_template__list_price'),
+                ref('product.field_product_template__standard_price'),
+                ref('website.field_product_template__is_published'),
+                ref('website.field_product_template__website_published'),
+            ])
+        ]"/>
+    </record>
+
+    <record id="automation_stock_quant_updated" model="base.automation">
+        <field name="name">BookHub: stock quantity updated</field>
+        <field name="model_id" ref="stock.model_stock_quant"/>
+        <field name="trigger">on_create_or_write</field>
+        <field name="trigger_field_ids" eval="[
+            (6, 0, [
+                ref('stock.field_stock_quant__quantity'),
+                ref('stock.field_stock_quant__available_quantity'),
+                ref('stock.field_stock_quant__reserved_quantity'),
+            ])
+        ]"/>
+    </record>
+</odoo>
