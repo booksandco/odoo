@@ -19,3 +19,9 @@ class LoyaltyCard(models.Model):
             if months:
                 vals['expiration_date'] = fields.Date.today() + relativedelta(months=months)
         return super().create(vals_list)
+
+    def _send_creation_communication(self, force_send=False):
+        """Do not auto-send gift card creation emails; other coupons are unaffected."""
+        return super(
+            LoyaltyCard, self.filtered(lambda c: c.program_id.program_type != 'gift_card')
+        )._send_creation_communication(force_send=force_send)
