@@ -46,10 +46,10 @@ class BookPublisher(models.Model):
                 if hardcover_id and not publisher.hardcover_id:
                     publisher.hardcover_id = hardcover_id
                 return publisher
-            return self.create({
-                'name': name,
-                'hardcover_id': hardcover_id or False,
-            })
+            vals = {'name': name}
+            if hardcover_id:
+                vals['hardcover_id'] = hardcover_id
+            return self.create(vals)
         return self.browse()
 
     @api.model
