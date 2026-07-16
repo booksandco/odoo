@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.bookhub.sync</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="BookHub Sync" string="BookHub Sync" name="bookhub_sync" groups="base.group_system">
+                    <block title="BookHub Webhook" name="bookhub_webhook_setting_container">
+                        <setting string="Webhook URL"
+                                 help="Endpoint that receives product and stock update notifications from Odoo.">
+                            <field name="bookhub_webhook_url" placeholder="https://..."/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>
