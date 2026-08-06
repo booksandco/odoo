@@ -1,6 +1,6 @@
 {
     'name': 'BookHub Sync (CirclePOS)',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.1',
     'category': 'Website',
     'summary': 'Push product and stock updates to the CirclePOS shadow site for BookHub',
     'description': """
@@ -14,9 +14,10 @@ shadow site.
   (PATCH /v1/site_items for stock, POST /v1/site_products/imports for
   product data).
 - OAuth2 client_credentials authentication, configured in
-  Settings > General Settings > BookHub Sync.
+  Settings > General Settings > Integrations.
 """,
     'depends': [
+        'base_setup',
         'website_sale',
         'stock',
     ],
