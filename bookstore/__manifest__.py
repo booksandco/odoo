@@ -1,6 +1,6 @@
 {
     'name': 'Bookstore',
-    'version': '19.0.1.4.0',
+    'version': '19.0.1.4.1',
     'category': 'Retail',
     'depends': [
         'account',
@@ -9,6 +9,7 @@
         'loyalty',
         'mail',
         'point_of_sale',
+        'pos_loyalty',
         'product',
         'purchase',
         'sale_management',

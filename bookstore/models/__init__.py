@@ -3,6 +3,7 @@ from . import book_publisher
 from . import book_product_author
 from . import loyalty_card
 from . import loyalty_program
+from . import pos_order
 from . import product_product
 from . import product_public_category
 from . import product_template
