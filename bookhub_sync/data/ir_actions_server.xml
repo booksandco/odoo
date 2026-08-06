@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<odoo>
+    <record id="action_server_product_template_webhook" model="ir.actions.server">
+        <field name="name">BookHub: enqueue product update</field>
+        <field name="model_id" ref="product.model_product_template"/>
+        <field name="state">code</field>
+        <field name="base_automation_id" ref="automation_product_template_updated"/>
+        <field name="code"><![CDATA[
+env['bookhub.sync.queue'].sudo().enqueue_product_import(records)
+]]></field>
+    </record>
+
+    <record id="action_server_stock_quant_webhook" model="ir.actions.server">
+        <field name="name">BookHub: enqueue stock update</field>
+        <field name="model_id" ref="stock.model_stock_quant"/>
+        <field name="state">code</field>
+        <field name="base_automation_id" ref="automation_stock_quant_updated"/>
+        <field name="code"><![CDATA[
+quants = records.filtered(lambda q: q.location_id.usage == 'internal')
+env['bookhub.sync.queue'].sudo().enqueue_stock_update(quants.mapped('product_id'))
+]]></field>
+    </record>
+</odoo>
