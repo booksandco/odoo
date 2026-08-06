@@ -1,6 +1,6 @@
 {
     'name': 'BookHub Sync (CirclePOS)',
-    'version': '19.0.1.0.1',
+    'version': '19.0.1.0.2',
     'category': 'Website',
     'summary': 'Push product and stock updates to the CirclePOS shadow site for BookHub',
     'description': """
@@ -29,6 +29,7 @@ shadow site.
         'views/bookhub_sync_queue_views.xml',
         'views/res_config_settings_views.xml',
     ],
+    'post_init_hook': 'post_init_hook',
     'license': 'LGPL-3',
     'author': 'Harry Bird',
 }

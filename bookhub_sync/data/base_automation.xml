@@ -9,10 +9,10 @@
                 ref('product.field_product_template__name'),
                 ref('product.field_product_template__default_code'),
                 ref('product.field_product_template__list_price'),
-                ref('website.field_product_template__is_published'),
-                ref('website.field_product_template__website_published'),
             ])
         ]"/>
+        <!-- is_published has no external id (injected via website mixin), so
+             it is added as a trigger field in the post_init_hook instead. -->
     </record>
 
     <record id="automation_stock_quant_updated" model="base.automation">
