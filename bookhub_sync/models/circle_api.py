@@ -48,7 +48,11 @@ class CircleApi(models.AbstractModel):
             headers={'User-Agent': USER_AGENT},
             timeout=REQUEST_TIMEOUT,
         )
-        response.raise_for_status()
+        if not response.ok:
+            raise UserError(
+                f'BookHub Sync: token request rejected with HTTP '
+                f'{response.status_code}: {response.text[:500]}'
+            )
         data = response.json()
         token = data['access_token']
         ICP.set_param('bookhub_sync.oauth_token', token)
