@@ -53,6 +53,21 @@ class BookhubSyncQueue(models.Model):
         product.product, not on the template)."""
         return max(0, int(sum(template.product_variant_ids.mapped('free_qty'))))
 
+    @api.model
+    def _is_book(self, template):
+        """Only books are synced: ISBN-13 barcodes start with 978 or 979."""
+        code = template.default_code or ''
+        return code.startswith(('978', '979'))
+
+    @api.model
+    def _should_sync(self, template):
+        """Sync books only, and only once they have stock — unless Circle
+        already knows the product, so that a later drop to zero (and price
+        or publish changes) still gets pushed."""
+        return self._is_book(template) and (
+            template.bookhub_synced or self._get_stock(template) > 0
+        )
+
     def _prepare_import_payload(self, template):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
         return {
@@ -67,7 +82,7 @@ class BookhubSyncQueue(models.Model):
     def _enqueue(self, event, templates):
         """Create or refresh pending queue items for the given templates."""
         for template in templates:
-            if not template.default_code:
+            if not self._should_sync(template):
                 continue
             if event == 'stock_update':
                 payload = {
@@ -98,18 +113,20 @@ class BookhubSyncQueue(models.Model):
     @api.model
     def enqueue_stock_update(self, products):
         """Enqueue a stock update for the templates of the given product variants."""
-        templates = products.mapped('product_tmpl_id').filtered('website_published')
-        self._enqueue('stock_update', templates)
+        self._enqueue('stock_update', products.mapped('product_tmpl_id'))
 
     @api.model
     def enqueue_full_sync(self):
         """Enqueue a product import (incl. price, stock and landing URL) for
-        every product that has a barcode. Published state is carried via the
-        'hidden' flag in the payload."""
+        every in-stock book. Published state is carried via the 'hidden'
+        flag in the payload."""
         templates = self.env['product.template'].search([
-            ('default_code', '!=', False),
+            '|',
+            ('default_code', '=like', '978%'),
+            ('default_code', '=like', '979%'),
             ('sale_ok', '=', True),
         ])
+        templates = templates.filtered(lambda t: self._get_stock(t) > 0)
         self._enqueue('product_import', templates)
         return len(templates)
 
@@ -161,6 +178,9 @@ class BookhubSyncQueue(models.Model):
                 except ValueError:
                     pass
             chunk.write({'state': 'done', 'error': False})
+            # Remember that Circle knows these products, so future updates
+            # (e.g. stock dropping to zero) keep syncing.
+            chunk.mapped('product_tmpl_id').sudo().write({'bookhub_synced': True})
         else:
             _logger.warning('BookHub sync: %s rejected (%s): %s', event, response.status_code, response.text)
             self._mark_chunk(chunk, f'HTTP {response.status_code}: {response.text[:2000]}')

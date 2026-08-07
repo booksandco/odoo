@@ -1,6 +1,6 @@
 {
     'name': 'BookHub Sync (CirclePOS)',
-    'version': '19.0.1.0.5',
+    'version': '19.0.1.1.0',
     'category': 'Website',
     'summary': 'Push product and stock updates to the CirclePOS shadow site for BookHub',
     'description': """
@@ -9,6 +9,9 @@ Pushes product and stock updates to the CirclePOS shadow site
 titles and the redirect slug (non_circle_landing_page_url) from the
 shadow site.
 
+- Only books are synced (ISBN-13 barcodes starting 978/979). Products
+  enter the sync once they have stock; after the first successful push
+  they keep syncing, so a later drop to zero still reaches Circle.
 - Automation rules enqueue changes on product.template and stock.quant.
 - A queue model batches changes; a cron flushes them to the API
   (PATCH /v1/site_items for stock, POST /v1/site_products/imports for
