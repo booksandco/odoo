@@ -10,6 +10,8 @@ from odoo.tools.translate import _
 _logger = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT = 30
+# Circle's WAF blocks the default python-requests user agent with a 403.
+USER_AGENT = 'BookHubSync/1.0 (+https://booksandco.co.nz)'
 
 
 class CircleApi(models.AbstractModel):
@@ -43,6 +45,7 @@ class CircleApi(models.AbstractModel):
                 'client_secret': client_secret,
                 'scope': 'p_r p_m',
             },
+            headers={'User-Agent': USER_AGENT},
             timeout=REQUEST_TIMEOUT,
         )
         response.raise_for_status()
@@ -61,6 +64,7 @@ class CircleApi(models.AbstractModel):
         headers = {
             'Authorization': f'Bearer {self._get_token()}',
             'Content-Type': 'application/json',
+            'User-Agent': USER_AGENT,
         }
         site_domain = self._get_param('bookhub_sync.site_domain')
         if site_domain:
