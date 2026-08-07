@@ -77,3 +77,12 @@ class CircleApi(models.AbstractModel):
     def import_products(self, items):
         """POST /v1/site_products/imports — up to 1000 product dicts."""
         return self._request('POST', '/v1/site_products/imports', payload=items)
+
+    def get_exported_isbns(self):
+        """GET /v1/data_export/products — ISBNs of every product on the site."""
+        response = self._request('GET', '/v1/data_export/products?response_format=json')
+        response.raise_for_status()
+        data = response.json()
+        if isinstance(data, dict):
+            data = data.get('data', [])
+        return {str(item.get('isbn', '')) for item in data}

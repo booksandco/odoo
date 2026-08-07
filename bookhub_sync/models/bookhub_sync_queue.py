@@ -2,6 +2,7 @@ import json
 import logging
 
 from odoo import api, fields, models
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -118,17 +119,32 @@ class BookhubSyncQueue(models.Model):
     @api.model
     def enqueue_full_sync(self):
         """Enqueue a product import (incl. price, stock and landing URL) for
-        every in-stock book. Published state is carried via the 'hidden'
-        flag in the payload."""
+        every in-stock book AND every book already on the Circle site, so
+        existing products get refreshed (price/hidden/stock/landing URL)
+        even when now out of stock. Published state is carried via the
+        'hidden' flag in the payload."""
+        try:
+            circle_isbns = self.env['bookhub.circle.api'].get_exported_isbns()
+        except Exception as exc:
+            raise UserError(
+                'BookHub Sync: could not fetch the product list from '
+                f'CirclePOS ({exc}). Check the API credentials in '
+                'Settings > General Settings > Integrations.'
+            )
         templates = self.env['product.template'].search([
             '|',
             ('default_code', '=like', '978%'),
             ('default_code', '=like', '979%'),
             ('sale_ok', '=', True),
         ])
-        templates = templates.filtered(lambda t: self._get_stock(t) > 0)
-        self._enqueue('product_import', templates)
-        return len(templates)
+        on_circle = templates.filtered(lambda t: t.default_code in circle_isbns)
+        in_stock = templates.filtered(lambda t: self._get_stock(t) > 0)
+        # Products Circle already knows about should keep syncing even at
+        # zero stock, so mark them as synced.
+        on_circle.sudo().write({'bookhub_synced': True})
+        to_sync = on_circle | in_stock
+        self._enqueue('product_import', to_sync)
+        return len(to_sync)
 
     # ------------------------------------------------------------------
     # Flush
