@@ -8,10 +8,24 @@
             <xpath expr="//block[@name='integration']" position="inside">
                 <setting string="BookHub Sync (CirclePOS)" id="bookhub_sync_setting"
                          help="Push product and stock updates to the CirclePOS shadow site. Find the OAuth app under Settings &gt; Internal Services in the Circle backoffice.">
-                    <field name="bookhub_base_url"/>
-                    <field name="bookhub_site_domain"/>
-                    <field name="bookhub_client_id"/>
-                    <field name="bookhub_client_secret" password="True"/>
+                    <div class="content-group">
+                        <div class="mt16 row">
+                            <label for="bookhub_base_url" class="col-3 o_light_label"/>
+                            <field name="bookhub_base_url"/>
+                        </div>
+                        <div class="mt16 row">
+                            <label for="bookhub_site_domain" class="col-3 o_light_label"/>
+                            <field name="bookhub_site_domain"/>
+                        </div>
+                        <div class="mt16 row">
+                            <label for="bookhub_client_id" class="col-3 o_light_label"/>
+                            <field name="bookhub_client_id"/>
+                        </div>
+                        <div class="mt16 row">
+                            <label for="bookhub_client_secret" class="col-3 o_light_label"/>
+                            <field name="bookhub_client_secret" password="True"/>
+                        </div>
+                    </div>
                     <div class="content-group mt16">
                         <button name="action_bookhub_view_queue"
                                 string="View Sync Queue"
