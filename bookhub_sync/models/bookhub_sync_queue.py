@@ -27,7 +27,7 @@ class BookhubSyncQueue(models.Model):
         index=True,
     )
     product_tmpl_id = fields.Many2one(
-        'product.template', string='Product', required=True, index=True, ondelete='cascade',
+        'product.template', string='Product', index=True, ondelete='cascade',
     )
     barcode = fields.Char(index=True)
     payload = fields.Text(help='JSON payload sent to the CirclePOS API.')
@@ -69,13 +69,15 @@ class BookhubSyncQueue(models.Model):
             template.bookhub_synced or self._get_stock(template) > 0
         )
 
-    def _prepare_import_payload(self, template):
+    def _prepare_import_payload(self, template, stock):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
         return {
             'item_barcode': template.default_code,
             'regular_price': template.list_price,
-            'hidden': not template.website_published,
-            'stock': self._get_stock(template),
+            # Zero-stock products are hidden to keep the site clean; a
+            # restock un-hides them (see _enqueue's zero-crossing rule).
+            'hidden': not template.website_published or stock == 0,
+            'stock': stock,
             'non_circle_landing_page_url': base_url.rstrip('/') + template.website_url,
         }
 
@@ -85,15 +87,20 @@ class BookhubSyncQueue(models.Model):
         for template in templates:
             if not self._should_sync(template):
                 continue
-            if event == 'stock_update':
-                payload = {
-                    'item_barcode': template.default_code,
-                    'stock': self._get_stock(template),
-                }
+            stock = self._get_stock(template)
+            effective = event
+            if event == 'stock_update' and template.bookhub_last_stock >= 0:
+                # Crossing zero either way flips the hidden flag, which only
+                # a product import carries — a bare stock PATCH cannot.
+                if (template.bookhub_last_stock == 0) != (stock == 0):
+                    effective = 'product_import'
+            template.sudo().bookhub_last_stock = stock
+            if effective == 'stock_update':
+                payload = {'item_barcode': template.default_code, 'stock': stock}
             else:
-                payload = self._prepare_import_payload(template)
+                payload = self._prepare_import_payload(template, stock)
             existing = self.search([
-                ('event', '=', event),
+                ('event', '=', effective),
                 ('product_tmpl_id', '=', template.id),
                 ('state', '=', 'pending'),
             ], limit=1)
@@ -101,9 +108,31 @@ class BookhubSyncQueue(models.Model):
                 existing.write({'payload': json.dumps(payload), 'barcode': template.default_code})
             else:
                 self.create({
-                    'event': event,
+                    'event': effective,
                     'product_tmpl_id': template.id,
                     'barcode': template.default_code,
+                    'payload': json.dumps(payload),
+                })
+
+    @api.model
+    def _enqueue_raw(self, event, items):
+        """Enqueue pre-built payloads.
+
+        items: list of (barcode, payload dict, product.template or None).
+        """
+        for barcode, payload, template in items:
+            existing = self.search([
+                ('event', '=', event),
+                ('barcode', '=', barcode),
+                ('state', '=', 'pending'),
+            ], limit=1)
+            if existing:
+                existing.write({'payload': json.dumps(payload)})
+            else:
+                self.create({
+                    'event': event,
+                    'product_tmpl_id': template.id if template else False,
+                    'barcode': barcode,
                     'payload': json.dumps(payload),
                 })
 
@@ -145,6 +174,39 @@ class BookhubSyncQueue(models.Model):
         to_sync = on_circle | in_stock
         self._enqueue('product_import', to_sync)
         return len(to_sync)
+
+    @api.model
+    def enqueue_cleanup(self):
+        """Hide everything on the Circle site that is not an in-stock book:
+        non-ISBN merchandise, books we no longer carry, and zero-stock
+        books. Hidden products stay known to Circle, so restock updates
+        keep working (unlike deletion, which the API does not support)."""
+        try:
+            circle_isbns = self.env['bookhub.circle.api'].get_exported_isbns()
+        except Exception as exc:
+            raise UserError(
+                'BookHub Sync: could not fetch the product list from '
+                f'CirclePOS ({exc}). Check the API credentials in '
+                'Settings > General Settings > Integrations.'
+            )
+        books = self.env['product.template'].search([
+            '|',
+            ('default_code', '=like', '978%'),
+            ('default_code', '=like', '979%'),
+        ])
+        by_code = {t.default_code: t for t in books}
+        items = []
+        for isbn in circle_isbns:
+            template = by_code.get(isbn) if isbn.startswith(('978', '979')) else None
+            if template and self._get_stock(template) > 0:
+                continue  # healthy in-stock book, left to the normal sync
+            items.append((isbn, {'item_barcode': isbn, 'hidden': True}, template))
+            if template:
+                # Record zero so a later restock is seen as a zero-crossing
+                # and un-hides the product via a product import.
+                template.sudo().bookhub_last_stock = 0
+        self._enqueue_raw('product_import', items)
+        return len(items)
 
     # ------------------------------------------------------------------
     # Flush
@@ -197,6 +259,26 @@ class BookhubSyncQueue(models.Model):
             # Remember that Circle knows these products, so future updates
             # (e.g. stock dropping to zero) keep syncing.
             chunk.mapped('product_tmpl_id').sudo().write({'bookhub_synced': True})
+            if event == 'stock_update':
+                # PATCH rejects items the site does not list; re-send those
+                # as product imports so restocks of removed/missing items
+                # self-heal instead of silently failing.
+                succeeded = set()
+                try:
+                    body = response.json()
+                    succeeded = {
+                        str(i.get('item_barcode'))
+                        for i in (body.get('data') or {}).get('success') or []
+                    }
+                except ValueError:
+                    pass
+                missing = chunk.filtered(lambda q: q.barcode not in succeeded)
+                if missing:
+                    _logger.info(
+                        'BookHub sync: %d stock update(s) not listed on Circle; '
+                        'falling back to product import', len(missing),
+                    )
+                    self._enqueue('product_import', missing.mapped('product_tmpl_id'))
         else:
             _logger.warning('BookHub sync: %s rejected (%s): %s', event, response.status_code, response.text)
             self._mark_chunk(chunk, f'HTTP {response.status_code}: {response.text[:2000]}')

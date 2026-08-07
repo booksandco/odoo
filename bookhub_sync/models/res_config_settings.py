@@ -38,3 +38,16 @@ class ResConfigSettings(models.TransientModel):
                 'sticky': False,
             },
         }
+
+    def action_bookhub_cleanup(self):
+        count = self.env['bookhub.sync.queue'].enqueue_cleanup()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'BookHub Sync',
+                'message': f'{count} Circle products queued to be hidden.',
+                'type': 'success',
+                'sticky': False,
+            },
+        }

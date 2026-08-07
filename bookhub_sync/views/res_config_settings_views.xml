@@ -37,6 +37,11 @@
                                 type="object"
                                 icon="oi-arrow-right"
                                 class="btn-link"/>
+                        <button name="action_bookhub_cleanup"
+                                string="Hide Stale Circle Products"
+                                type="object"
+                                icon="oi-arrow-right"
+                                class="btn-link"/>
                     </div>
                 </setting>
             </xpath>
