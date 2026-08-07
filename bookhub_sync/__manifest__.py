@@ -1,6 +1,6 @@
 {
     'name': 'BookHub Sync (CirclePOS)',
-    'version': '19.0.1.0.2',
+    'version': '19.0.1.0.3',
     'category': 'Website',
     'summary': 'Push product and stock updates to the CirclePOS shadow site for BookHub',
     'description': """
