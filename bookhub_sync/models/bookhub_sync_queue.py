@@ -47,13 +47,19 @@ class BookhubSyncQueue(models.Model):
     # Enqueue
     # ------------------------------------------------------------------
 
+    @api.model
+    def _get_stock(self, template):
+        """Free-to-use quantity across all variants (free_qty lives on
+        product.product, not on the template)."""
+        return max(0, int(sum(template.product_variant_ids.mapped('free_qty'))))
+
     def _prepare_import_payload(self, template):
         base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
         return {
             'item_barcode': template.default_code,
             'regular_price': template.list_price,
             'hidden': not template.website_published,
-            'stock': max(0, int(template.free_qty)),
+            'stock': self._get_stock(template),
             'non_circle_landing_page_url': base_url.rstrip('/') + template.website_url,
         }
 
@@ -66,7 +72,7 @@ class BookhubSyncQueue(models.Model):
             if event == 'stock_update':
                 payload = {
                     'item_barcode': template.default_code,
-                    'stock': max(0, int(template.free_qty)),
+                    'stock': self._get_stock(template),
                 }
             else:
                 payload = self._prepare_import_payload(template)
