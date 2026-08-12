@@ -1,0 +1,5 @@
+# Python dependencies for custom modules (installed by odoo.sh at build time)
+# mcp_server module (see mcp_server/requirements.txt / __manifest__.py external_dependencies)
+authlib>=1.6.12,<1.7.0
+defusedxml
+packaging
