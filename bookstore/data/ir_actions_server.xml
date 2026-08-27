@@ -31,6 +31,8 @@ for picking in records:
             env['stock.warehouse.orderpoint'].create({
                 'trigger': 'manual',
                 'product_id': move.product_id.id,
+                'product_min_qty': 1,
+                'product_max_qty': 1,
             })
         if po:
             env['purchase.order.line'].create({
