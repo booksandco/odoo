@@ -1,6 +1,6 @@
 {
     'name': 'Replenishment Review',
-    'version': '19.0.1.0.1',
+    'version': '19.0.1.0.2',
     'category': 'Inventory',
     'summary': 'Card-based, keyboard-driven replenishment review',
     'depends': [

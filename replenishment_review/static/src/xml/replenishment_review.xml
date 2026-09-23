@@ -13,7 +13,7 @@
             </div>
 
             <div class="o_rr_stage">
-                <div class="o_rr_loading" t-if="state.loading and not current">
+                <div class="o_rr_loading" t-if="state.loading and !current">
                     <i class="fa fa-circle-o-notch fa-spin fa-2x"/>
                     <div>Loading review queue…</div>
                 </div>
@@ -147,7 +147,7 @@
                 </div>
             </div>
 
-            <div class="o_rr_actionbar" t-if="current and not state.pendingSnooze">
+            <div class="o_rr_actionbar" t-if="current and !state.pendingSnooze">
                 <button class="btn btn-primary o_rr_action" t-on-click="orderCurrent">
                     <span class="o_rr_hotkey">Enter</span>
                     Order <t t-esc="current.qty_to_order_computed"/>
