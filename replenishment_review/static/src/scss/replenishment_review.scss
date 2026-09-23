@@ -48,7 +48,8 @@
 
 .o_rr_card {
     display: flex;
-    width: min(920px, 100%);
+    width: 100%;
+    max-width: 920px;
     background: #fff;
     border-radius: 14px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
@@ -216,7 +217,8 @@
     background: #fff;
     border-radius: 12px;
     padding: 24px;
-    width: min(560px, 92%);
+    width: 92%;
+    max-width: 560px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
 }
 
