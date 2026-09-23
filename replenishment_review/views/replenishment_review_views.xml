@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="action_replenishment_review" model="ir.actions.client">
+        <field name="name">Replenishment Review</field>
+        <field name="tag">replenishment_review</field>
+        <field name="res_model">stock.warehouse.orderpoint</field>
+    </record>
+
+    <menuitem
+        id="menu_replenishment_review"
+        name="Replenishment Review"
+        action="action_replenishment_review"
+        parent="stock.menu_stock_procurement"
+        sequence="6"
+        groups="stock.group_stock_manager"/>
+
+</odoo>

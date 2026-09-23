@@ -1,0 +1,239 @@
+.o_replenishment_review {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--o-replenishment-review-bg, #f4f6f9);
+    overflow: hidden;
+}
+
+.o_rr_header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--o-replenishment-review-border, #dee2e6);
+    background: #fff;
+}
+
+.o_rr_title {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.o_rr_progress {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.o_rr_stage {
+    position: relative;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow: auto;
+}
+
+.o_rr_loading,
+.o_rr_empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: #6c757d;
+    text-align: center;
+}
+
+.o_rr_card {
+    display: flex;
+    width: min(920px, 100%);
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    border-top: 6px solid #6c757d;
+    overflow: hidden;
+}
+
+.o_rr_card--customer_order {
+    border-top-color: #dc3545;
+}
+
+.o_rr_card--stock_depleted {
+    border-top-color: #0d6efd;
+}
+
+.o_rr_cover_wrap {
+    position: relative;
+    flex: 0 0 260px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.o_rr_cover {
+    max-width: 100%;
+    max-height: 340px;
+    object-fit: contain;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+.o_rr_rating {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 0.85rem;
+}
+
+.o_rr_body {
+    flex: 1 1 auto;
+    padding: 24px;
+    min-width: 0;
+}
+
+.o_rr_reason_banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+}
+
+.o_rr_reason_banner--customer_order {
+    background: #f8d7da;
+    color: #842029;
+}
+
+.o_rr_reason_banner--stock_depleted {
+    background: #cfe2ff;
+    color: #084298;
+}
+
+.o_rr_name {
+    font-size: 1.5rem;
+    margin: 0 0 6px;
+    overflow-wrap: anywhere;
+}
+
+.o_rr_meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 18px;
+}
+
+.o_rr_facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 32px;
+    margin-bottom: 12px;
+}
+
+.o_rr_facts_secondary {
+    border-top: 1px dashed #dee2e6;
+    padding-top: 12px;
+}
+
+.o_rr_fact {
+    display: flex;
+    flex-direction: column;
+    min-width: 90px;
+}
+
+.o_rr_fact_label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #adb5bd;
+}
+
+.o_rr_fact_value {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.o_rr_highlight {
+    color: #0d6efd;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.o_rr_flags {
+    display: flex;
+    gap: 6px;
+    margin-top: 16px;
+}
+
+.o_rr_actionbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 12px 20px;
+    border-top: 1px solid #dee2e6;
+    background: #fff;
+}
+
+.o_rr_action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.o_rr_hotkey {
+    display: inline-block;
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.08);
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+.o_rr_snooze,
+.o_rr_overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(33, 37, 41, 0.45);
+    z-index: 20;
+}
+
+.o_rr_snooze_box,
+.o_rr_summary {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    width: min(560px, 92%);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+
+.o_rr_snooze_box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.o_rr_summary_list {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0;
+}
+
+.o_rr_summary_actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}

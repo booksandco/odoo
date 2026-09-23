@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="replenishment_review.ReplenishmentReview">
+        <div class="o_replenishment_review">
+
+            <div class="o_rr_header">
+                <div class="o_rr_title">
+                    <i class="fa fa-truck me-2"/>
+                    Replenishment Review
+                </div>
+                <div class="o_rr_progress" t-esc="progressLabel"/>
+            </div>
+
+            <div class="o_rr_stage">
+                <div class="o_rr_loading" t-if="state.loading and not current">
+                    <i class="fa fa-circle-o-notch fa-spin fa-2x"/>
+                    <div>Loading review queue…</div>
+                </div>
+
+                <div class="o_rr_error alert alert-danger" t-if="state.error">
+                    <i class="fa fa-exclamation-triangle me-2"/>
+                    <t t-esc="state.error"/>
+                    <button class="btn btn-sm btn-link" t-on-click="loadBatch">Retry</button>
+                </div>
+
+                <div class="o_rr_empty" t-if="finished">
+                    <i class="fa fa-check-circle fa-3x text-success"/>
+                    <h3>Review complete</h3>
+                    <p t-if="state.staged.length">
+                        <t t-esc="state.staged.length"/>
+                        action(s) staged but not yet committed.
+                    </p>
+                    <p t-else="">Nothing left to replenish. You are all caught up.</p>
+                    <button
+                        t-if="state.staged.length"
+                        class="btn btn-primary"
+                        t-on-click="openSummary">
+                        Review &amp; commit
+                    </button>
+                </div>
+
+                <div t-if="current" t-attf-class="o_rr_card o_rr_card--{{ current.reason }}">
+                    <div class="o_rr_cover_wrap">
+                        <img class="o_rr_cover" t-att-src="current.image_url" t-att-alt="current.name"/>
+                        <div class="o_rr_rating" t-if="current.hardcover_rating">
+                            <i class="fa fa-star text-warning"/>
+                            <t t-esc="current.hardcover_rating"/>
+                        </div>
+                    </div>
+
+                    <div class="o_rr_body">
+                        <div t-attf-class="o_rr_reason_banner o_rr_reason_banner--{{ current.reason }}">
+                            <i class="fa" t-att-class="current.reason === 'customer_order' ? 'fa-user' : 'fa-arrow-down'"/>
+                            <t t-if="current.reason === 'customer_order'">
+                                Customer order —
+                                <strong t-esc="current.reason_detail.customer_name or 'customer'"/>
+                                ordered
+                                <strong t-esc="current.reason_detail.qty_ordered"/>
+                                <span t-if="current.reason_detail.sale_order_name">
+                                    (<t t-esc="current.reason_detail.sale_order_name"/>)
+                                </span>
+                            </t>
+                            <t t-else="">
+                                Stock depleted
+                                <span t-if="current.deadline_date"> — deadline <strong t-esc="current.deadline_date"/></span>
+                            </t>
+                        </div>
+
+                        <h2 class="o_rr_name" t-esc="current.name"/>
+                        <div class="o_rr_meta">
+                            <span t-if="current.author" t-esc="current.author"/>
+                            <span t-if="current.publisher" t-esc="current.publisher"/>
+                            <span t-if="current.publication_date">Published <t t-esc="current.publication_date"/></span>
+                        </div>
+
+                        <div class="o_rr_facts">
+                            <div class="o_rr_fact">
+                                <span class="o_rr_fact_label">On hand</span>
+                                <span class="o_rr_fact_value" t-esc="current.qty_on_hand"/>
+                            </div>
+                            <div class="o_rr_fact">
+                                <span class="o_rr_fact_label">Forecast</span>
+                                <span class="o_rr_fact_value" t-esc="current.qty_forecast"/>
+                            </div>
+                            <div class="o_rr_fact">
+                                <span class="o_rr_fact_label">To order</span>
+                                <span class="o_rr_fact_value o_rr_highlight" t-esc="current.qty_to_order_computed"/>
+                            </div>
+                            <div class="o_rr_fact">
+                                <span class="o_rr_fact_label">Last sale</span>
+                                <span class="o_rr_fact_value" t-esc="current.last_sale_date or '—'"/>
+                            </div>
+                        </div>
+
+                        <div class="o_rr_facts o_rr_facts_secondary">
+                            <div class="o_rr_fact" t-if="current.has_open_po">
+                                <span class="o_rr_fact_label">On order</span>
+                                <span class="o_rr_fact_value text-info">
+                                    <t t-esc="current.open_po_qty"/>
+                                    <span t-if="current.open_po_name"> (<t t-esc="current.open_po_name"/>)</span>
+                                </span>
+                            </div>
+                            <div class="o_rr_fact" t-if="current.vendor_name">
+                                <span class="o_rr_fact_label">Vendor</span>
+                                <span class="o_rr_fact_value">
+                                    <t t-esc="current.vendor_name"/>
+                                    <span t-if="current.vendor_code"> · <t t-esc="current.vendor_code"/></span>
+                                    <span t-if="current.vendor_delay"> · <t t-esc="current.vendor_delay"/>d lead</span>
+                                </span>
+                            </div>
+                            <div class="o_rr_fact">
+                                <span class="o_rr_fact_label">Sales</span>
+                                <span class="o_rr_fact_value">
+                                    <t t-esc="current.sales_last_30_days"/> / 30d ·
+                                    <t t-esc="current.sales_last_90_days"/> / 90d ·
+                                    <t t-esc="current.sales_last_365_days"/> / 365d
+                                </span>
+                            </div>
+                            <div class="o_rr_fact" t-if="current.avg_days_on_shelf !== null">
+                                <span class="o_rr_fact_label">Avg days in stock</span>
+                                <span t-attf-class="o_rr_fact_value {{ current.is_below_baseline ? 'text-success' : '' }}">
+                                    <t t-esc="current.avg_days_on_shelf"/>
+                                    <span t-if="current.category_avg_days_on_shelf !== null">
+                                        (category <t t-esc="current.category_avg_days_on_shelf"/>)
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="o_rr_flags">
+                            <span class="badge text-bg-light" t-esc="current.trigger"/>
+                            <span class="badge text-bg-light" t-if="current.product_uom_name" t-esc="current.product_uom_name"/>
+                            <span class="badge text-bg-light" t-if="current.list_price" t-esc="current.currency_symbol + ' ' + current.list_price"/>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="o_rr_snooze" t-if="state.pendingSnooze">
+                    <div class="o_rr_snooze_box">
+                        <h4>Snooze for how long?</h4>
+                        <button class="btn btn-outline-secondary" t-on-click="() => this.applySnooze(1)">D — 1 day</button>
+                        <button class="btn btn-outline-secondary" t-on-click="() => this.applySnooze(7)">W — 1 week</button>
+                        <button class="btn btn-outline-secondary" t-on-click="() => this.applySnooze(30)">M — 1 month</button>
+                        <button class="btn btn-link" t-on-click="() => this.state.pendingSnooze = false">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="o_rr_actionbar" t-if="current and not state.pendingSnooze">
+                <button class="btn btn-primary o_rr_action" t-on-click="orderCurrent">
+                    <span class="o_rr_hotkey">Enter</span>
+                    Order <t t-esc="current.qty_to_order_computed"/>
+                </button>
+                <button class="btn btn-outline-primary o_rr_action" t-on-click="() => this.orderQty(1)">
+                    <span class="o_rr_hotkey">1</span> Order 1
+                </button>
+                <button class="btn btn-outline-primary o_rr_action" t-on-click="() => this.orderQty(2)">
+                    <span class="o_rr_hotkey">2</span> Order 2
+                </button>
+                <button
+                    class="btn btn-outline-warning o_rr_action"
+                    t-on-click="beginSnooze"
+                    t-att-disabled="current.trigger !== 'manual'">
+                    <span class="o_rr_hotkey">S</span> Snooze
+                </button>
+                <button class="btn btn-outline-danger o_rr_action" t-on-click="archiveCurrent">
+                    <span class="o_rr_hotkey">A</span> Archive
+                </button>
+                <button class="btn btn-outline-secondary o_rr_action" t-on-click="skip">
+                    <span class="o_rr_hotkey">→</span> Skip
+                </button>
+                <button class="btn btn-outline-secondary o_rr_action" t-on-click="undo">
+                    <span class="o_rr_hotkey">←</span> Undo
+                </button>
+                <button class="btn btn-outline-dark o_rr_action ms-auto" t-on-click="openSummary">
+                    <span class="o_rr_hotkey">Esc</span> Review &amp; commit
+                </button>
+            </div>
+
+            <div class="o_rr_overlay" t-if="state.summaryOpen">
+                <div class="o_rr_summary">
+                    <h3>Commit review</h3>
+                    <p>You have staged the following actions. Nothing is saved until you confirm.</p>
+                    <ul class="o_rr_summary_list">
+                        <li t-if="stagedCounts.order">
+                            <i class="fa fa-shopping-cart text-primary me-2"/>
+                            <t t-esc="stagedCounts.order"/> purchase order line(s)
+                        </li>
+                        <li t-if="stagedCounts.snooze">
+                            <i class="fa fa-bell-slash text-warning me-2"/>
+                            <t t-esc="stagedCounts.snooze"/> item(s) snoozed
+                        </li>
+                        <li t-if="stagedCounts.archive">
+                            <i class="fa fa-archive text-danger me-2"/>
+                            <t t-esc="stagedCounts.archive"/> product(s) archived
+                        </li>
+                        <li t-if="!state.staged.length" class="text-muted">
+                            No actions staged.
+                        </li>
+                    </ul>
+                    <div class="o_rr_summary_actions">
+                        <button class="btn btn-primary" t-on-click="confirm" t-att-disabled="state.busy">
+                            Confirm &amp; exit
+                        </button>
+                        <button class="btn btn-secondary" t-on-click="closeSummary" t-att-disabled="state.busy">
+                            Keep reviewing
+                        </button>
+                        <button class="btn btn-link text-danger ms-auto" t-on-click="cancelAndClose">
+                            Discard &amp; close
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </t>
+
+</templates>
