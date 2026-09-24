@@ -66,6 +66,7 @@ class StockWarehouseOrderpoint(models.Model):
             'ordered': 0,
             'snoozed': 0,
             'archived': 0,
+            'stopped': 0,
             'skipped': 0,
             'po_ids': [],
             'po_names': [],
@@ -75,6 +76,7 @@ class StockWarehouseOrderpoint(models.Model):
         order_qty = {}
         snooze_pairs = []
         templates_to_archive = self.env['product.template']
+        products_to_stop = self.env['product.product']
         seen = set()
 
         for raw in actions:
@@ -104,7 +106,7 @@ class StockWarehouseOrderpoint(models.Model):
                 if orderpoint.trigger != 'manual':
                     summary['errors'].append(
                         _(
-                            "%(product)s uses an automatic rule and cannot be snoozed; archive it instead.",
+                            "%(product)s uses an automatic rule and cannot be snoozed; use Never reorder or archive the product.",
                             product=orderpoint.product_id.display_name,
                         )
                     )
@@ -113,6 +115,8 @@ class StockWarehouseOrderpoint(models.Model):
                 snooze_pairs.append((orderpoint, fields.Date.context_today(self) + relativedelta(days=days)))
             elif action == 'archive':
                 templates_to_archive |= orderpoint.product_tmpl_id
+            elif action == 'stop_reorder':
+                products_to_stop |= orderpoint.product_id
             elif action == 'skip':
                 summary['skipped'] += 1
             else:
@@ -141,6 +145,14 @@ class StockWarehouseOrderpoint(models.Model):
         if templates_to_archive:
             templates_to_archive.write({'active': False})
             summary['archived'] = len(templates_to_archive)
+
+        if products_to_stop:
+            rules = self.with_context(active_test=False).search([
+                ('product_id', 'in', products_to_stop.ids),
+                ('active', '=', True),
+            ])
+            rules.write({'active': False})
+            summary['stopped'] = len(products_to_stop)
 
         return summary
 

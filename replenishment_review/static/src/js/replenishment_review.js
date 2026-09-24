@@ -44,7 +44,7 @@ export class ReplenishmentReview extends Component {
     }
 
     get stagedCounts() {
-        const counts = { order: 0, snooze: 0, archive: 0 };
+        const counts = { order: 0, snooze: 0, archive: 0, stop_reorder: 0 };
         for (const staged of this.state.staged) {
             counts[staged.action] = (counts[staged.action] || 0) + 1;
         }
@@ -127,6 +127,10 @@ export class ReplenishmentReview extends Component {
         this.stage("archive");
     }
 
+    stopReorder() {
+        this.stage("stop_reorder");
+    }
+
     beginSnooze() {
         const card = this.current;
         if (!card) {
@@ -134,7 +138,7 @@ export class ReplenishmentReview extends Component {
         }
         if (card.trigger !== "manual") {
             this.notification.add(
-                _t("Automatic rules cannot be snoozed. Archive the product instead."),
+                _t("Automatic rules cannot be snoozed. Use Never reorder, or archive the product."),
                 { type: "warning" }
             );
             return;
@@ -217,6 +221,9 @@ export class ReplenishmentReview extends Component {
         if (summary.archived) {
             parts.push(_t("%s archived", summary.archived));
         }
+        if (summary.stopped) {
+            parts.push(_t("%s marked never reorder", summary.stopped));
+        }
         return parts.length ? parts.join(", ") : _t("No changes applied");
     }
 
@@ -277,6 +284,10 @@ export class ReplenishmentReview extends Component {
             case "a":
             case "A":
                 this.archiveCurrent();
+                break;
+            case "n":
+            case "N":
+                this.stopReorder();
                 break;
             case "ArrowRight":
                 ev.preventDefault();

@@ -164,8 +164,13 @@
                     t-att-disabled="current.trigger !== 'manual'">
                     <span class="o_rr_hotkey">S</span> Snooze
                 </button>
-                <button class="btn btn-outline-danger o_rr_action" t-on-click="archiveCurrent">
-                    <span class="o_rr_hotkey">A</span> Archive
+                <button class="btn btn-outline-warning o_rr_action" t-on-click="stopReorder"
+                        title="Keep selling remaining stock, but never create a reorder rule again">
+                    <span class="o_rr_hotkey">N</span> Never reorder
+                </button>
+                <button class="btn btn-outline-danger o_rr_action" t-on-click="archiveCurrent"
+                        title="Remove the product from the catalogue (website, POS and inventory)">
+                    <span class="o_rr_hotkey">A</span> Archive product
                 </button>
                 <button class="btn btn-outline-secondary o_rr_action" t-on-click="skip">
                     <span class="o_rr_hotkey">→</span> Skip
@@ -191,9 +196,15 @@
                             <i class="fa fa-bell-slash text-warning me-2"/>
                             <t t-esc="stagedCounts.snooze"/> item(s) snoozed
                         </li>
+                        <li t-if="stagedCounts.stop_reorder">
+                            <i class="fa fa-ban text-warning me-2"/>
+                            <t t-esc="stagedCounts.stop_reorder"/> product(s) will never be reordered
+                            <span class="text-muted">(rule archived, product stays on sale)</span>
+                        </li>
                         <li t-if="stagedCounts.archive">
                             <i class="fa fa-archive text-danger me-2"/>
                             <t t-esc="stagedCounts.archive"/> product(s) archived
+                            <span class="text-muted">(removed from the catalogue)</span>
                         </li>
                         <li t-if="!state.staged.length" class="text-muted">
                             No actions staged.

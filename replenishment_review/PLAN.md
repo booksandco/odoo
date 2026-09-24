@@ -222,7 +222,8 @@ Cards are sorted by priority, then by urgency:
 | `1` | Order 1 | Override: order exactly 1. Staged. Card dismissed. |
 | `2` | Order 2 | Override: order exactly 2. Staged. Card dismissed. |
 | `S` | Snooze | Opens sub-prompt: `D`=1 day, `W`=1 week, `M`=1 month. Sets `snoozed_until` on the orderpoint. Staged. Card dismissed. |
-| `A` | Archive | Sets `active=False` on `product.template`. This archives the product itself — it disappears from the website, POS, inventory, and replenishment. Staged. Card dismissed. |
+| `N` | Never reorder | **Archives the orderpoint/rule only** (`stock.warehouse.orderpoint.active=False`) for every rule on the product. The product stays on sale; only future replenishment stops. Staged. Card dismissed. This is the "we're never ordering that again" action. |
+| `A` | Archive product | Sets `active=False` on `product.template`. This archives the **product itself** — it disappears from the website, POS, inventory, and replenishment. Use for items leaving the catalogue entirely. Staged. Card dismissed. |
 | `→` | Skip | Move to next card. Current card goes to the back of the stack. Not staged — reappears next session. |
 | `←` | Undo last | Reverses the last staged action in this session. The previous card reappears. This is trivial with two-phase commit — just pop the action from the client-side queue. |
 | `Esc` | Exit | Opens the confirmation summary. If there are staged actions, shows the summary dialog. If no actions taken, returns to the replenishment list. |
@@ -243,6 +244,23 @@ product archival. Effects:
 - **Sales history**: preserved. Reports still include archived products.
 - **Reversibility**: can be unarchived from the product list (Archived filter →
   set `active=True`).
+
+### Never Reorder Semantics
+
+"Never reorder" archives the product's reordering rules
+(`stock.warehouse.orderpoint.active=False`) without touching the product:
+
+- **Product**: remains active, on the website and in the POS. Remaining stock
+  still sells normally.
+- **Replenishment**: the product stops appearing in the review list.
+- **Durability**: the rule is not recreated — the incoming-picking automation
+  and the backfill both check for orderpoints *including archived ones*
+  (`active_test=False`), so a deliberately stopped product stays stopped.
+- **Reversibility**: re-enable from Inventory → Reordering Rules (Archived
+  filter → set `active=True`), or create a new rule.
+
+Use **Never reorder** for "we won't stock this again"; use **Archive product**
+only when the item is leaving the catalogue entirely.
 
 ### Sales Velocity Computation
 
