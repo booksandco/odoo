@@ -15,29 +15,29 @@ for picking in records:
             'partner_id': picking.partner_id.id,
         })
     for move in picking.move_ids:
-        if move.product_id.seller_ids[:1].partner_id == picking.partner_id:
-            continue
-        move.product_id.seller_ids.filtered(lambda s: not s.date_end).write({'date_end': datetime.datetime.today().date()})
-        env['product.supplierinfo'].create({
-            'product_id': move.product_id.id,
-            'partner_id': picking.partner_id.id,
-            'date_start': datetime.datetime.today().date(),
-            'sequence': (move.product_id.seller_ids[:1].sequence or 10) - 1,
-            'price': move.product_id.standard_price,
-            'delay': 0,
-            'min_qty': 1,
-        })
-        if not move.product_id.orderpoint_ids:
+        product = move.product_id
+        if product.seller_ids[:1].partner_id != picking.partner_id:
+            product.seller_ids.filtered(lambda s: not s.date_end).write({'date_end': datetime.datetime.today().date()})
+            env['product.supplierinfo'].create({
+                'product_id': product.id,
+                'partner_id': picking.partner_id.id,
+                'date_start': datetime.datetime.today().date(),
+                'sequence': (product.seller_ids[:1].sequence or 10) - 1,
+                'price': product.standard_price,
+                'delay': 0,
+                'min_qty': 1,
+            })
+            if po:
+                env['purchase.order.line'].create({
+                    'product_id': product.id,
+                    'order_id': po.id,
+                })
+        if not env['stock.warehouse.orderpoint'].with_context(active_test=False).search_count([('product_id', '=', product.id)]):
             env['stock.warehouse.orderpoint'].create({
                 'trigger': 'manual',
-                'product_id': move.product_id.id,
+                'product_id': product.id,
                 'product_min_qty': 1,
                 'product_max_qty': 1,
-            })
-        if po:
-            env['purchase.order.line'].create({
-                'product_id': move.product_id.id,
-                'order_id': po.id,
             })
     if po:
         po['state'] = 'purchase'
