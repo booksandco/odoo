@@ -33,7 +33,7 @@ for picking in records:
                     'order_id': po.id,
                 })
         if not env['stock.warehouse.orderpoint'].with_context(active_test=False).search_count([('product_id', '=', product.id)]):
-            env['stock.warehouse.orderpoint'].create({
+            env['stock.warehouse.orderpoint'].with_user(env.ref('base.user_admin')).create({
                 'trigger': 'manual',
                 'product_id': product.id,
                 'product_min_qty': 1,
