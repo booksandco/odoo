@@ -1,5 +1,19 @@
 # Replenishment Review — Card-Based Replenishment Workflow
 
+> **⚠ SHIP TOGETHER WITH THE BOOKSTORE REPLENISHMENT FIXES**
+>
+> This module is intentionally bundled with `fix/bookstore-orderpoint-creation`
+> (merged into the `feature/replenishment-review` branch). That branch fixed
+> reordering-rule creation in the `bookstore` module (19.0.1.4.3 / 19.0.1.4.4):
+> it backfills ~2,700 rules for sold ISBN titles, makes the incoming-picking
+> automation always create a rule, and turns on `replenish_location` so books
+> **and giftware** auto-create `min=1/max=1` rules.
+>
+> On its own that produces a large replenishment list. Shipping the review UI
+> and the bookstore changes in the **same** release gives staff the tool to work
+> through it. Do **not** merge one side without the other — merge the whole
+> `feature/replenishment-review` branch to `main` together.
+
 ## Motivation
 
 The current replenishment view (`stock.warehouse.orderpoint` list, filtered by
