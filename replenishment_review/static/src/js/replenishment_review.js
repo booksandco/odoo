@@ -31,6 +31,8 @@ export class ReplenishmentReview extends Component {
             staged: [],
             summaryOpen: false,
             pendingSnooze: false,
+            pendingOrder: false,
+            customOrderQty: "",
             busy: false,
             error: null,
         });
@@ -111,16 +113,59 @@ export class ReplenishmentReview extends Component {
         }
     }
 
-    orderCurrent() {
-        const card = this.current;
-        if (!card) {
-            return;
-        }
-        this.stage("order", { qty: card.qty_to_order_computed || card.qty_to_order || 1 });
+    orderDefault() {
+        this.orderQty(2);
     }
 
     orderQty(qty) {
-        this.stage("order", { qty });
+        const quantity = Number(qty);
+        if (!quantity || quantity <= 0) {
+            return;
+        }
+        this.stage("order", { qty: quantity });
+        this.state.pendingOrder = false;
+        this.state.customOrderQty = "";
+    }
+
+    openOrderPrompt() {
+        if (this.current) {
+            this.state.pendingOrder = true;
+        }
+    }
+
+    orderCustom() {
+        this.orderQty(this.state.customOrderQty);
+    }
+
+    onCustomOrderKeydown(ev) {
+        if (ev.key === "Enter") {
+            ev.preventDefault();
+            this.orderCustom();
+        }
+    }
+
+    openRecord(model, resId, ev) {
+        if (ev && (ev.ctrlKey || ev.metaKey)) {
+            return;
+        }
+        if (ev) {
+            ev.preventDefault();
+        }
+        this.actionService.doAction({
+            type: "ir.actions.act_window",
+            res_model: model,
+            res_id: resId,
+            views: [[false, "form"]],
+            target: "new",
+        });
+    }
+
+    openProduct(ev) {
+        this.openRecord("product.template", this.current.product_tmpl_id, ev);
+    }
+
+    openSaleOrder(ev) {
+        this.openRecord("sale.order", this.current.reason_detail.sale_order_id, ev);
     }
 
     archiveCurrent() {
@@ -236,6 +281,8 @@ export class ReplenishmentReview extends Component {
         this.state.staged = [];
         this.state.summaryOpen = false;
         this.state.pendingSnooze = false;
+        this.state.pendingOrder = false;
+        this.state.customOrderQty = "";
         this.history = [];
     }
 
@@ -263,19 +310,27 @@ export class ReplenishmentReview extends Component {
             }
             return;
         }
+        if (this.state.pendingOrder) {
+            const key = (ev.key || "").toLowerCase();
+            if (["1", "2", "3"].includes(key)) {
+                this.orderQty(Number(key));
+            } else if (ev.key === "Escape") {
+                this.state.pendingOrder = false;
+                this.state.customOrderQty = "";
+            }
+            return;
+        }
         if (this.state.loading || this.state.busy || this.state.error) {
             return;
         }
         switch (ev.key) {
             case "Enter":
                 ev.preventDefault();
-                this.orderCurrent();
+                this.orderDefault();
                 break;
-            case "1":
-                this.orderQty(1);
-                break;
-            case "2":
-                this.orderQty(2);
+            case "o":
+            case "O":
+                this.openOrderPrompt();
                 break;
             case "s":
             case "S":

@@ -218,15 +218,23 @@ Cards are sorted by priority, then by urgency:
 
 | Key | Action | What Happens |
 |---|---|---|
-| `Enter` | Order (computed qty) | Accepts `qty_to_order_computed` as the order quantity. Staged for commit. Card dismissed. |
-| `1` | Order 1 | Override: order exactly 1. Staged. Card dismissed. |
-| `2` | Order 2 | Override: order exactly 2. Staged. Card dismissed. |
+| `Enter` | Order 2 (default) | Orders exactly 2. Staged for commit. Card dismissed. |
+| `O` | Order… | Opens a prompt with `1` / `2` / `3` and a custom quantity field. Staged. Card dismissed. |
 | `S` | Snooze | Opens sub-prompt: `D`=1 day, `W`=1 week, `M`=1 month. Sets `snoozed_until` on the orderpoint. Staged. Card dismissed. |
 | `N` | Never reorder | **Archives the orderpoint/rule only** (`stock.warehouse.orderpoint.active=False`) for every rule on the product. The product stays on sale; only future replenishment stops. Staged. Card dismissed. This is the "we're never ordering that again" action. |
 | `A` | Archive product | Sets `active=False` on `product.template`. This archives the **product itself** — it disappears from the website, POS, inventory, and replenishment. Use for items leaving the catalogue entirely. Staged. Card dismissed. |
 | `→` | Skip | Move to next card. Current card goes to the back of the stack. Not staged — reappears next session. |
 | `←` | Undo last | Reverses the last staged action in this session. The previous card reappears. This is trivial with two-phase commit — just pop the action from the client-side queue. |
 | `Esc` | Exit | Opens the confirmation summary. If there are staged actions, shows the summary dialog. If no actions taken, returns to the replenishment list. |
+
+### Internal Links
+
+The card exposes internal backend links that open the record in a dialog (normal
+click) or a new tab (middle-click / `Ctrl`/`Cmd`-click):
+
+- The **title** links to the product form (`/odoo/product.template/<id>`).
+- On a **customer-order** card, the sale order name links to the order
+  (`/odoo/sale.order/<id>`).
 
 ### Archive Semantics
 

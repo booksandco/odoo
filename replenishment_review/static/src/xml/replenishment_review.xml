@@ -58,7 +58,13 @@
                                 ordered
                                 <strong t-esc="current.reason_detail.qty_ordered"/>
                                 <span t-if="current.reason_detail.sale_order_name">
-                                    (<t t-esc="current.reason_detail.sale_order_name"/>)
+                                    (<a t-att-href="'/odoo/sale.order/' + current.reason_detail.sale_order_id"
+                                        t-on-click="openSaleOrder"
+                                        target="_blank" rel="noopener"
+                                        class="o_rr_link"
+                                        t-att-title="'Open ' + current.reason_detail.sale_order_name">
+                                        <t t-esc="current.reason_detail.sale_order_name"/>
+                                    </a>)
                                 </span>
                             </t>
                             <t t-else="">
@@ -67,7 +73,15 @@
                             </t>
                         </div>
 
-                        <h2 class="o_rr_name" t-esc="current.name"/>
+                        <h2 class="o_rr_name">
+                            <a t-att-href="'/odoo/product.template/' + current.product_tmpl_id"
+                               t-on-click="openProduct"
+                               target="_blank" rel="noopener"
+                               class="o_rr_link"
+                               t-att-title="'Open ' + current.name">
+                                <t t-esc="current.name"/>
+                            </a>
+                        </h2>
                         <div class="o_rr_meta">
                             <span t-if="current.author" t-esc="current.author"/>
                             <span t-if="current.publisher" t-esc="current.publisher"/>
@@ -145,18 +159,35 @@
                         <button class="btn btn-link" t-on-click="() => this.state.pendingSnooze = false">Cancel</button>
                     </div>
                 </div>
+
+                <div class="o_rr_snooze" t-if="state.pendingOrder">
+                    <div class="o_rr_snooze_box">
+                        <h4>Order how many?</h4>
+                        <div class="o_rr_order_choices">
+                            <button class="btn btn-outline-primary" t-on-click="() => this.orderQty(1)">1</button>
+                            <button class="btn btn-outline-primary" t-on-click="() => this.orderQty(2)">2</button>
+                            <button class="btn btn-outline-primary" t-on-click="() => this.orderQty(3)">3</button>
+                        </div>
+                        <div class="o_rr_order_custom">
+                            <label class="mb-0">Custom</label>
+                            <input type="number" min="1" class="form-control"
+                                   placeholder="Qty"
+                                   t-model="state.customOrderQty"
+                                   t-on-keydown="onCustomOrderKeydown"/>
+                            <button class="btn btn-primary" t-on-click="orderCustom">Order</button>
+                        </div>
+                        <button class="btn btn-link" t-on-click="() => this.state.pendingOrder = false">Cancel</button>
+                    </div>
+                </div>
             </div>
 
-            <div class="o_rr_actionbar" t-if="current and !state.pendingSnooze">
-                <button class="btn btn-primary o_rr_action" t-on-click="orderCurrent">
-                    <span class="o_rr_hotkey">Enter</span>
-                    Order <t t-esc="current.qty_to_order_computed"/>
+            <div class="o_rr_actionbar" t-if="current and !state.pendingSnooze and !state.pendingOrder">
+                <button class="btn btn-primary o_rr_action" t-on-click="orderDefault" title="Order 2 (default)">
+                    <span class="o_rr_hotkey">Enter</span> Order 2
                 </button>
-                <button class="btn btn-outline-primary o_rr_action" t-on-click="() => this.orderQty(1)">
-                    <span class="o_rr_hotkey">1</span> Order 1
-                </button>
-                <button class="btn btn-outline-primary o_rr_action" t-on-click="() => this.orderQty(2)">
-                    <span class="o_rr_hotkey">2</span> Order 2
+                <button class="btn btn-outline-primary o_rr_action" t-on-click="openOrderPrompt"
+                        title="Choose a quantity (1, 2, 3 or custom)">
+                    <span class="o_rr_hotkey">O</span> Order…
                 </button>
                 <button
                     class="btn btn-outline-warning o_rr_action"
