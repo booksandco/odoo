@@ -113,10 +113,6 @@ export class ReplenishmentReview extends Component {
         }
     }
 
-    orderDefault() {
-        this.orderQty(2);
-    }
-
     orderQty(qty) {
         const quantity = Number(qty);
         if (!quantity || quantity <= 0) {
@@ -326,10 +322,6 @@ export class ReplenishmentReview extends Component {
         switch (ev.key) {
             case "Enter":
                 ev.preventDefault();
-                this.orderDefault();
-                break;
-            case "o":
-            case "O":
                 this.openOrderPrompt();
                 break;
             case "s":

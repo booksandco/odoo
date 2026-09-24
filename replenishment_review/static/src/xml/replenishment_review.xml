@@ -182,12 +182,9 @@
             </div>
 
             <div class="o_rr_actionbar" t-if="current and !state.pendingSnooze and !state.pendingOrder">
-                <button class="btn btn-primary o_rr_action" t-on-click="orderDefault" title="Order 2 (default)">
-                    <span class="o_rr_hotkey">Enter</span> Order 2
-                </button>
-                <button class="btn btn-outline-primary o_rr_action" t-on-click="openOrderPrompt"
-                        title="Choose a quantity (1, 2, 3 or custom)">
-                    <span class="o_rr_hotkey">O</span> Order…
+                <button class="btn btn-primary o_rr_action" t-on-click="openOrderPrompt"
+                        title="Order a quantity (1, 2, 3 or custom)">
+                    <span class="o_rr_hotkey">Enter</span> Order…
                 </button>
                 <button
                     class="btn btn-outline-warning o_rr_action"

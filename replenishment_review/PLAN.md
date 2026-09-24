@@ -218,8 +218,7 @@ Cards are sorted by priority, then by urgency:
 
 | Key | Action | What Happens |
 |---|---|---|
-| `Enter` | Order 2 (default) | Orders exactly 2. Staged for commit. Card dismissed. |
-| `O` | Order… | Opens a prompt with `1` / `2` / `3` and a custom quantity field. Staged. Card dismissed. |
+| `Enter` | Order… | Opens a prompt with `1` / `2` / `3` and a custom quantity field. Staged for commit. Card dismissed. |
 | `S` | Snooze | Opens sub-prompt: `D`=1 day, `W`=1 week, `M`=1 month. Sets `snoozed_until` on the orderpoint. Staged. Card dismissed. |
 | `N` | Never reorder | **Archives the orderpoint/rule only** (`stock.warehouse.orderpoint.active=False`) for every rule on the product. The product stays on sale; only future replenishment stops. Staged. Card dismissed. This is the "we're never ordering that again" action. |
 | `A` | Archive product | Sets `active=False` on `product.template`. This archives the **product itself** — it disappears from the website, POS, inventory, and replenishment. Use for items leaving the catalogue entirely. Staged. Card dismissed. |
