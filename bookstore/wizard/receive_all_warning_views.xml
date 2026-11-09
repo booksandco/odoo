@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_bookstore_receive_all_warning_form" model="ir.ui.view">
+        <field name="name">bookstore.receive.all.warning.form</field>
+        <field name="model">bookstore.receive.all.warning</field>
+        <field name="arch" type="xml">
+            <form string="Receive all items?">
+                <field name="picking_ids" invisible="1"/>
+                <div class="alert alert-warning" role="alert">
+                    <p class="fw-bold">
+                        You are about to receive every item on this receipt.
+                    </p>
+                    <p>
+                        All quantities are set to the full ordered quantity. If only
+                        part of the delivery has arrived, click <strong>Cancel</strong>
+                        and use the <strong>Barcode</strong> app to scan just the books
+                        that arrived. Then validate the receipt and create a backorder
+                        for the rest.
+                    </p>
+                </div>
+                <group>
+                    <group>
+                        <field name="picking_names" readonly="1"/>
+                        <field name="po_names" readonly="1"/>
+                    </group>
+                    <group>
+                        <field name="line_count" readonly="1"/>
+                        <field name="unit_count" readonly="1"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_receive_all" string="Receive All" type="object"
+                            class="btn-primary" data-hotkey="q"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"
+                            data-hotkey="x"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

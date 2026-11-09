@@ -1,6 +1,6 @@
 {
     'name': 'Bookstore',
-    'version': '19.0.1.4.5',
+    'version': '19.0.1.5.0',
     'category': 'Retail',
     'depends': [
         'account',
@@ -12,6 +12,7 @@
         'pos_loyalty',
         'product',
         'purchase',
+        'purchase_stock',
         'sale_management',
         'stock',
         'website_sale',
@@ -30,6 +31,7 @@
         'data/pos_payment_method.xml',
         'data/pos_config.xml',
         'data/loyalty_program_views.xml',
+        'wizard/receive_all_warning_views.xml',
     ],
 
     'license': 'OEEL-1',

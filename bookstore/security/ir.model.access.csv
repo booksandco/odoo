@@ -8,3 +8,4 @@ access_bookstore_publisher_portal,Bookstore Publisher Portal,model_bookstore_pub
 access_bookstore_product_author_user,Bookstore Product Author User,model_bookstore_product_author,base.group_user,1,1,1,1
 access_bookstore_product_author_public,Bookstore Product Author Public,model_bookstore_product_author,base.group_public,1,0,0,0
 access_bookstore_product_author_portal,Bookstore Product Author Portal,model_bookstore_product_author,base.group_portal,1,0,0,0
+access_bookstore_receive_all_warning,Bookstore Receive All Warning,model_bookstore_receive_all_warning,stock.group_stock_user,1,1,1,1
